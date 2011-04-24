@@ -44,12 +44,23 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
+#define PG_SIZE 2<<12
+
 /*
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
 {
-	return 0;
+    /* will call mem_sbrk for each element, of each seglist
+     * will return -1 if error (mem_sbrk returns -1 on error)
+     */
+    //mem_sbrk for smallest class
+    int class_size = 6;
+    for(int i = 0; i < 12; i++) {
+
+
+    }
+    return 0;
 }
 
 /*
@@ -94,17 +105,5 @@ void *mm_realloc(void *ptr, size_t size)
 	mm_free(oldptr);
 	return newptr;
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
