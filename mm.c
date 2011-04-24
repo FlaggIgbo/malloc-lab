@@ -30,9 +30,9 @@ team_t team = {
 	/* First member's NYU NetID*/
 	"abf277@nyu.edu",
 	/* Second member's full name (leave blank if none) */
-	"",
+	"Hursh Agrawal",
 	/* Second member's email address (leave blank if none) */
-	""
+	"ha470@nyu.edu"
 };
 
 /* single word (4) or double word (8) alignment */
@@ -41,10 +41,12 @@ team_t team = {
 /* rounds up to the nearest multiple of ALIGNMENT */
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
 
-
-#define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
+#define SIZE_T_SIZE (ALIGN(sizeof(size_t) + 2))
 
 #define PG_SIZE 2<<12
+
+//array holding sizes of all classes
+int CLASS_SIZES[]; 
 
 /*
  * mm_init - initialize the malloc package.
@@ -70,6 +72,8 @@ int mm_init(void)
 void *mm_malloc(size_t size)
 {
 	int newsize = ALIGN(size + SIZE_T_SIZE);
+	
+
 	void *p = mem_sbrk(newsize);
 	if (p == (void *)-1)
 		return NULL;
@@ -104,6 +108,14 @@ void *mm_realloc(void *ptr, size_t size)
 	memcpy(newptr, oldptr, copySize);
 	mm_free(oldptr);
 	return newptr;
+}
+
+/*
+ * mm_check - checks consistency of heap
+ */
+int	mm_check(void)
+{
+	
 }
 
 
