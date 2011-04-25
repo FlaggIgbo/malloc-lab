@@ -47,7 +47,7 @@ team_t team = {
 
 #define NUM_CLASSES 10
 
-#define OVERHEAD (ALIGN(sizeof(size_t) + 1))
+#define OVERHEAD (ALIGN(sizeof(int) + 2))
 
 //the length of the initial seg-list
 #define SEGLIST_LENGTH 10
