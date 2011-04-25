@@ -41,29 +41,64 @@ team_t team = {
 /* rounds up to the nearest multiple of ALIGNMENT */
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
 
-#define SIZE_T_SIZE (ALIGN(sizeof(size_t) + 2))
+#define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
 #define PG_SIZE 2<<12
 
-//array holding sizes of all classes
-int CLASS_SIZES[]; 
+#define NUM_CLASSES 10
+
+#define OVERHEAD (ALIGN(sizeof(size_t) + 1))
+
+//the length of the initial seg-list
+#define SEGLIST_LENGTH 10
+
+//array holding the size of usable data in each class (total malloc'd - overhead)
+int CLASS_SIZE[NUM_CLASSES];
+
+//array of pointers holding linked lists for all classes
+void* CLASSES[NUM_CLASSES];
 
 /*
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
-{
-    /* will call mem_sbrk for each element, of each seglist
-     * will return -1 if error (mem_sbrk returns -1 on error)
-     */
-    //mem_sbrk for smallest class
-    int class_size = 6;
-    for(int i = 0; i < 12; i++) {
-
-
-    }
-    return 0;
+{	
+	int i, j;
+	int alloc_size; //size of memory chunks in any particular size class
+	void* mem_chunk;
+	
+	for(i = 0; i < NUM_CLASSES; i++) { //populate CLASS_SIZE array
+		CLASS_SIZE[i] = (ALIGN(ALIGNMENT^(i + 1)) - OVERHEAD);
+	}
+	
+	for(i = 0; i < NUM_CLASSES; i++) {   //mem_sbrk each class
+		alloc_size = ALIGN(ALIGNMENT^(i + 1));
+		CLASSES[i] = mem_sbrk(alloc_size * SEGLIST_LENGTH);
+		
+		mem_chunk = CLASSES[i];
+		CLASSES[i] = (char*)mem_chunk + 5; //changes pointer to point to THAT chunk's pointer out (making a linked list)
+		
+		/*	Sets up metadata for each free group as follows
+		 *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata), 
+		 *	4 bytes = pointer to next chunk's pointer, ~~~~DATA~~~~~, 4 bytes = size, 1 byte = free or alloc
+		 */
+		for(j = 0; j < SEGLIST_LENGTH; j++) {
+			*mem_chunk = 0; //sets free/allocated byte 
+			//*NOTE TO ANDREW - tried doing it in a bit but too confusing/too much hassle - sticking to 1 byte*
+			mem_chunk = (char*)mem_chunk + 1;
+			*mem_chunk = alloc_size; //puts size data in (in header)
+			mem_chunk = (int*)mem_chunk + 1;
+			*mem_chunk = (char*)mem_chunk + alloc_size; //puts in pointer to next chunk
+			mem_chunk = (char*)mem_chunk + alloc_size - 10;
+			*mem_chunk = alloc_size; //puts size data in (in footer)
+			mem_chunk = (int*)mem_chunk + 1;
+			*mem_chunk = 0; //sets free/allocated byte
+			mem_chunk = (char*)mem_chunk + 1; //moves to next in list
+		} 
+	}
+	return 0;
 }
+
 
 /*
  * mm_malloc - Allocate a block by incrementing the brk pointer.
