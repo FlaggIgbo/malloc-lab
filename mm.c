@@ -52,55 +52,28 @@ team_t team = {
 //the length of the initial seg-list
 #define SEGLIST_LENGTH 10
 
-//array holding the size of usable data in each class (total malloc'd - overhead)
-int CLASS_SIZE[NUM_CLASSES];
+//array holding the size of data in each class (total malloc'd, this includes metadata/overhead)
+int CLASS_SIZE[NUM_CLASSES+1];
 
 //array of pointers holding linked lists for all classes
 void* CLASSES[NUM_CLASSES];
 
 /*
- * mm_init - initialize the malloc package.
+ * mm_init - initialize the malloc package by populating arrays.
  */
 int mm_init(void)
 {	
-	int i, j;
-	int alloc_size; //size of memory chunks in any particular size class
-	char* mem_chunk;
+	int i;
 	
-	for(i = 0; i < NUM_CLASSES; i++) { //populate CLASS_SIZE array
-		CLASS_SIZE[i] = (ALIGN(ALIGNMENT^(i + 1)) - OVERHEAD);
+	for(i = 0; i < NUM_CLASSES; i++) {					 //populate CLASS_SIZE array
+		CLASS_SIZE[i] = (ALIGN(ALIGNMENT^(i + 1)));
+		CLASSES[i] = NULL;
 	}
 	
-	for(i = 0; i < NUM_CLASSES; i++) {   //mem_sbrk each class
-		alloc_size = ALIGN(ALIGNMENT^(i + 1));
-		CLASSES[i] = mem_sbrk(alloc_size * SEGLIST_LENGTH);
-		
-		mem_chunk = CLASSES[i];
-		CLASSES[i] = mem_chunk + 5; //changes pointer to point to THAT chunk's pointer out (making a linked list)
-		
-		/*	Sets up metadata for each free group as follows
-		 *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata), 
-		 *	4 bytes = pointer to next chunk's pointer, ~~~~DATA~~~~~, 4 bytes = size, 1 byte = free or alloc
-		 */
-		for(j = 0; j < SEGLIST_LENGTH; j++) {
-			*mem_chunk = 0; //sets free/allocated byte (in header)
-			//*NOTE TO ANDREW - tried doing it in a bit but too confusing/too much hassle - sticking to 1 byte*
-			mem_chunk = (int*)(mem_chunk + 1);
-			*mem_chunk = alloc_size; //puts size data in (in header)
-			mem_chunk = (char*)(mem_chunk + 1);
-			*mem_chunk = (char*)mem_chunk + alloc_size; //puts in pointer to next chunk
-			
-			mem_chunk = (int*)((char*)mem_chunk + alloc_size - 10);
-			*mem_chunk = alloc_size; //puts size data in (in footer)
-			mem_chunk = (char*)(mem_chunk + 1);
-			*mem_chunk = 0; //sets free/allocated byte (in footer)
-			
-			mem_chunk++; //moves to next in list
-		} 
-	}
+	CLASS_SIZE[NUM_CLASSES] = NULL; 						 //entry for MISC - bigger than biggest class
+
 	return 0;
 }
-
 
 /*
  * mm_malloc - Allocate a block by incrementing the brk pointer.
@@ -108,6 +81,10 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
+		/*	Sets up metadata for each free group as follows
+		 *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata), 
+		 *	, ~~~~DATA~~~~~, 1 byte = free or alloc
+		 */
 	int newsize = ALIGN(size + SIZE_T_SIZE);
 	
 
@@ -125,6 +102,57 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *ptr)
 {
+	int chunk_size, class_size;
+	int i = 0;
+	void* LL_ptr;
+	
+	ptr = (char*)ptr - 4;
+	chunk_size = (int)(*ptr);
+	ptr--;
+	
+	//*****TODO - coallescing*****
+	
+/*	Sets up metadata for each free group as follows
+ *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata), 
+ *	4/8 bytes = pointer to next chunk's pointer, ~~~~EMPTY~~~~~, 4 bytes = size, 1 byte = free or alloc
+ */
+	*ptr = 0;																		 //sets free/allocated byte (in header)
+	
+	//*NOTE TO ANDREW - tried doing it in 1 bit but too confusing/too much hassle - sticking to 1 byte*
+	
+	ptr = (int*)(ptr + 1);
+	*ptr = chunk_size; 													//puts size data in (in header)
+	ptr = (char*)(ptr + 1);
+	*ptr = NULL; 																//puts in pointer to next chunk (NULL at the moment, 
+																							//since this will be the last entry in the LL)
+
+	ptr = (int*)((char*)ptr + chunk_size - 10);
+	*ptr = chunk_size; 													//puts size data in (in footer)
+	ptr = (char*)(ptr + 1);
+	*ptr = 0; 																	//sets free/allocated byte (in footer)
+	ptr = ptr - chunk_size + 6;									//back to pointer to next chunk (NULL in this case) 
+	
+	
+	/*	Checks which size-class this data goes into
+	 */
+	class_size = CLASS_SIZE[i];
+	while( (chunk_size > class_size) && (i < NUM_CLASSES) ) {
+		class_size = CLASS_SIZE[++i];
+	}
+	
+	if(class_size == NULL){ 										 //entry is bigger than any class size
+		//*****TODO - add to miscellaneous-size linked list in a sorted fashion******
+	} else {																		 //entry fits into a predefined class
+		LL_ptr = CLASSES[class_size];
+	}
+	
+	/*	Adds to end of linked list
+	 */
+	while(*LL_ptr != NULL){
+		LL_ptr = *LL_ptr
+	}
+	*LL_ptr = ptr;
+	
 }
 
 /*
