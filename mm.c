@@ -49,9 +49,6 @@ team_t team = {
 
 #define OVERHEAD (ALIGN(sizeof(int) + 2))
 
-//the length of the initial seg-list
-#define SEGLIST_LENGTH 10
-
 //array holding the size of data in each class (total malloc'd, this includes metadata/overhead)
 int CLASS_SIZE[NUM_CLASSES+1];
 
