@@ -60,14 +60,18 @@ void* CLASSES[NUM_CLASSES];
  */
 int mm_init(void)
 {	
-	int i;
+	int i, size_value;
 	
+	size_value = ALIGNMENT;
 	for(i = 0; i < NUM_CLASSES; i++) {					 //populate CLASS_SIZE array
-		CLASS_SIZE[i] = (ALIGN(ALIGNMENT^(i + 1)));
+		
+		CLASS_SIZE[i] = (ALIGN(size_value));
 		CLASSES[i] = NULL;
+		
+		size_value = size_value*2;
 	}
 	
-	CLASS_SIZE[NUM_CLASSES] = NULL; 						 //entry for MISC - bigger than biggest class
+	CLASS_SIZE[NUM_CLASSES] = NULL; 					//entry for MISC - bigger than biggest class
 
 	return 0;
 }
@@ -114,36 +118,36 @@ void mm_free(void *ptr)
 	
 	//*****TODO - coallescing*****
 
-	*ptr = 0;																		 //sets free/allocated byte to free(in header)
+	*ptr = 0;															 //sets free/allocated byte to free(in header)
 	
 	//*NOTE TO ANDREW - tried doing it in 1 bit but too confusing/too much hassle - sticking to 1 byte*
 	
 	ptr = (int*)(ptr + 1);
 	*ptr = chunk_size; 													//puts size data in (in header)
 	ptr = (char*)(ptr + 1);
-	*ptr = NULL; 																//puts in pointer to next chunk (NULL at the moment, 
-																							//since this will be the last entry in the LL)
+	*ptr = NULL; 														//puts in pointer to next chunk (NULL at the moment, 
+																		//since this will be the last entry in the LL)
 
 	ptr = (int*)((char*)ptr + chunk_size - 10);
 	*ptr = chunk_size; 													//puts size data in (in footer)
 	ptr = (char*)(ptr + 1);
-	*ptr = 0; 																	//sets free/allocated byte (in footer)
-	ptr = ptr - chunk_size + 6;									//back to pointer to next chunk (NULL in this case) 
+	*ptr = 0; 															//sets free/allocated byte (in footer)
+	ptr = ptr - chunk_size + 6;											//back to pointer to next chunk (NULL in this case) 
 	
 	class_size = CLASS_SIZE[i];
 	while( (chunk_size > class_size) && (i < NUM_CLASSES) ) {
-		class_size = CLASS_SIZE[++i];							 //Checks which size class the data goes into
+		class_size = CLASS_SIZE[++i];						    	    //Checks which size class the data goes into
 	}
 	
-	if(class_size == NULL){ 										 //entry is bigger than any class size
+	if(class_size == NULL){										 	    //entry is bigger than any class size
 		
 		//*****TODO - add to miscellaneous-size linked list in a sorted fashion******
 		
-	} else {																		 //entry fits into a predefined class
+	} else {															//entry fits into a predefined class
 		LL_ptr = CLASSES[class_size];
 	}
 
-	while(*LL_ptr != NULL){										   //Adds to end of linked list
+	while(*LL_ptr != NULL){										   		//Adds to end of linked list
 		LL_ptr = *LL_ptr
 	}
 	*LL_ptr = ptr;
