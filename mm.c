@@ -77,13 +77,15 @@ int mm_init(void)
 
 /*
  * mm_malloc - Allocate a block by incrementing the brk pointer.
- *     Always allocate a block whose size is a multiple of the alignment.
+ *     Always allocate a block whose size is a multiple of the alignment
+ *
+ *	Sets up metadata for each free group as follows
+ *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata), 
+ *	~~~~DATA~~~~~, 1 byte = free or alloc
  */
 void *mm_malloc(size_t size)
 {
-		/*	Sets up metadata for each free group as follows
-		 *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata), 
-		 *	, ~~~~DATA~~~~~, 1 byte = free or alloc
+
 		 */
 	int newsize = ALIGN(size + SIZE_T_SIZE);
 	
@@ -98,7 +100,12 @@ void *mm_malloc(size_t size)
 }
 
 /*
- * mm_free - Freeing a block does nothing.
+ * mm_free - Frees a block by changing metadata to freed and adding to appropriate linked list.
+ *
+ *	Sets up metadata for each free group as follows
+ *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata), 
+ *	4/8 bytes = pointer to next chunk's pointer, ~~~~EMPTY~~~~~, 4 bytes = size, 1 byte = free or alloc
+ *
  */
 void mm_free(void *ptr)
 {
@@ -111,12 +118,8 @@ void mm_free(void *ptr)
 	ptr--;
 	
 	//*****TODO - coallescing*****
-	
-/*	Sets up metadata for each free group as follows
- *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata), 
- *	4/8 bytes = pointer to next chunk's pointer, ~~~~EMPTY~~~~~, 4 bytes = size, 1 byte = free or alloc
- */
-	*ptr = 0;																		 //sets free/allocated byte (in header)
+
+	*ptr = 0;																		 //sets free/allocated byte to free(in header)
 	
 	//*NOTE TO ANDREW - tried doing it in 1 bit but too confusing/too much hassle - sticking to 1 byte*
 	
