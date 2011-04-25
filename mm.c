@@ -85,8 +85,6 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-
-		 */
 	int newsize = ALIGN(size + SIZE_T_SIZE);
 	
 
@@ -135,23 +133,20 @@ void mm_free(void *ptr)
 	*ptr = 0; 																	//sets free/allocated byte (in footer)
 	ptr = ptr - chunk_size + 6;									//back to pointer to next chunk (NULL in this case) 
 	
-	
-	/*	Checks which size-class this data goes into
-	 */
 	class_size = CLASS_SIZE[i];
 	while( (chunk_size > class_size) && (i < NUM_CLASSES) ) {
-		class_size = CLASS_SIZE[++i];
+		class_size = CLASS_SIZE[++i];							 //Checks which size class the data goes into
 	}
 	
 	if(class_size == NULL){ 										 //entry is bigger than any class size
+		
 		//*****TODO - add to miscellaneous-size linked list in a sorted fashion******
+		
 	} else {																		 //entry fits into a predefined class
 		LL_ptr = CLASSES[class_size];
 	}
-	
-	/*	Adds to end of linked list
-	 */
-	while(*LL_ptr != NULL){
+
+	while(*LL_ptr != NULL){										   //Adds to end of linked list
 		LL_ptr = *LL_ptr
 	}
 	*LL_ptr = ptr;
