@@ -65,7 +65,7 @@ int mm_init(void)
 {	
 	int i, j;
 	int alloc_size; //size of memory chunks in any particular size class
-	void* mem_chunk;
+	char* mem_chunk;
 	
 	for(i = 0; i < NUM_CLASSES; i++) { //populate CLASS_SIZE array
 		CLASS_SIZE[i] = (ALIGN(ALIGNMENT^(i + 1)) - OVERHEAD);
@@ -76,24 +76,26 @@ int mm_init(void)
 		CLASSES[i] = mem_sbrk(alloc_size * SEGLIST_LENGTH);
 		
 		mem_chunk = CLASSES[i];
-		CLASSES[i] = (char*)mem_chunk + 5; //changes pointer to point to THAT chunk's pointer out (making a linked list)
+		CLASSES[i] = mem_chunk + 5; //changes pointer to point to THAT chunk's pointer out (making a linked list)
 		
 		/*	Sets up metadata for each free group as follows
 		 *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata), 
 		 *	4 bytes = pointer to next chunk's pointer, ~~~~DATA~~~~~, 4 bytes = size, 1 byte = free or alloc
 		 */
 		for(j = 0; j < SEGLIST_LENGTH; j++) {
-			*mem_chunk = 0; //sets free/allocated byte 
+			*mem_chunk = 0; //sets free/allocated byte (in header)
 			//*NOTE TO ANDREW - tried doing it in a bit but too confusing/too much hassle - sticking to 1 byte*
-			mem_chunk = (char*)mem_chunk + 1;
+			mem_chunk = (int*)(mem_chunk + 1);
 			*mem_chunk = alloc_size; //puts size data in (in header)
-			mem_chunk = (int*)mem_chunk + 1;
+			mem_chunk = (char*)(mem_chunk + 1);
 			*mem_chunk = (char*)mem_chunk + alloc_size; //puts in pointer to next chunk
-			mem_chunk = (char*)mem_chunk + alloc_size - 10;
+			
+			mem_chunk = (int*)((char*)mem_chunk + alloc_size - 10);
 			*mem_chunk = alloc_size; //puts size data in (in footer)
-			mem_chunk = (int*)mem_chunk + 1;
-			*mem_chunk = 0; //sets free/allocated byte
-			mem_chunk = (char*)mem_chunk + 1; //moves to next in list
+			mem_chunk = (char*)(mem_chunk + 1);
+			*mem_chunk = 0; //sets free/allocated byte (in footer)
+			
+			mem_chunk++; //moves to next in list
 		} 
 	}
 	return 0;
