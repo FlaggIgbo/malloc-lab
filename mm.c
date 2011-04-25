@@ -53,16 +53,16 @@ team_t team = {
 int CLASS_SIZE[NUM_CLASSES+1];
 
 //array of pointers holding linked lists for all classes
-void* CLASSES[NUM_CLASSES];
+void* CLASSES[NUM_CLASSES+1];
 
 /*
  * mm_init - initialize the malloc package by populating arrays.
  */
 int mm_init(void)
 {	
-	int i, size_value;
+	int i;
+	int size_value = ALIGNMENT;
 	
-	size_value = ALIGNMENT;
 	for(i = 0; i < NUM_CLASSES; i++) {					 //populate CLASS_SIZE array
 		
 		CLASS_SIZE[i] = (ALIGN(size_value));
@@ -113,26 +113,22 @@ void mm_free(void *ptr)
 	void* LL_ptr;
 	
 	ptr = (char*)ptr - 4;
-	chunk_size = (int)(*ptr);
-	ptr--;
+	chunk_size = *(int*)ptr;
+	ptr = (char*)ptr - 1;
 	
 	//*****TODO - coallescing*****
 
-	*ptr = 0;															 //sets free/allocated byte to free(in header)
-	
-	//*NOTE TO ANDREW - tried doing it in 1 bit but too confusing/too much hassle - sticking to 1 byte*
-	
+	*ptr = 0;															//sets free/allocated byte to free(in header)
+		
 	ptr = (int*)(ptr + 1);
-	*ptr = chunk_size; 													//puts size data in (in header)
-	ptr = (char*)(ptr + 1);
-	*ptr = NULL; 														//puts in pointer to next chunk (NULL at the moment, 
-																		//since this will be the last entry in the LL)
+	*ptr = chunk_size; 													//puts size data in (in header) - redo post coallescing
 
-	ptr = (int*)((char*)ptr + chunk_size - 10);
+	ptr = (int*)((char*)ptr + chunk_size - 6);
 	*ptr = chunk_size; 													//puts size data in (in footer)
 	ptr = (char*)(ptr + 1);
 	*ptr = 0; 															//sets free/allocated byte (in footer)
-	ptr = ptr - chunk_size + 6;											//back to pointer to next chunk (NULL in this case) 
+	
+	ptr = ptr - chunk_size + 6;											//back to pointer to next chunk (NULL in this case)
 	
 	class_size = CLASS_SIZE[i];
 	while( (chunk_size > class_size) && (i < NUM_CLASSES) ) {
@@ -147,11 +143,14 @@ void mm_free(void *ptr)
 		LL_ptr = CLASSES[class_size];
 	}
 
-	while(*LL_ptr != NULL){										   		//Adds to end of linked list
+/*	while(*LL_ptr != NULL){										   		//Adds to end of linked list
 		LL_ptr = *LL_ptr
+		
+		//******TODO - add to linked list in a SORTED fashion - to make a sorted LL, NOT at end*******
 	}
 	*LL_ptr = ptr;
-	
+*/
+
 }
 
 /*
