@@ -47,7 +47,7 @@ team_t team = {
 
 #define NUM_CLASSES 10
 
-#define OVERHEAD (ALIGN(sizeof(int) + 2))
+#define OVERHEAD (ALIGN(sizeof(int) + 5))//TODO does the 5 need to be 5*8...? Is the ALIGN necessary?
 
 //array holding the size of data in each class (total malloc'd, this includes metadata/overhead)
 //class sizes are 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096
@@ -82,46 +82,78 @@ int mm_init(void)
  *     Always allocate a block whose size is a multiple of the alignment
  *
  *	Sets up metadata for each free group as follows
- *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata),
+ *	1 byte = free (0) or allocated (1),
+ *	4 bytes = size of chunk as int (including metadata),
  *	~~~~DATA~~~~~,
  *	1 byte = free or alloc
  *
  *	-Searches for appropriate sized block in free list
  *	-If found,
- *	    >marks as used, mark size metadata
- *	    >removes block from free list
- *	    >repairs links of free list
- *	    >return pointer to beginning
- *	        TODO: is the pointer to the beginning of raw data or beginning of metadata?
- *	        >think i figured it out- we want to point to the beginning of the raw data.
+ *	    Xmarks as used (on both ends!), mark size metadata
+ *	    Xremoves block from free list
+ *	    Xrepairs links of free list
  *	    >takes remaining space and puts it in proper size free list (if possible)
+ *	    Xreturn pointer to beginning of usable data
  *	-If unfound
- *	    >mem_sbrk appropriate size
- *	    >mark as used, mark size metadata
- *	    >return pointer to beginning
+ *	    Xmem_sbrk appropriate size
+ *	    Xmark as used, mark size metadata
+ *	    Xreturn pointer to beginning
  */
 void *mm_malloc(size_t size)
 {
 
         int wasFound; //will be 1 if block is found, 0 if not found
-	int newsize = ALIGN(size + OVERHEAD); //TODO is this correct? why are we adding SIZE_T_SIZE?? have changed to OVERHEAD
+	int newsize = ALIGN(size + OVERHEAD);
+        int oldsize;
         int i = 0;
+        void *returnPointer;
 
         while(i < NUM_CLASSES){//find appropriate size class
-            if newsize <= CLASS_SIZE[i]
+            if size <= CLASS_SIZE[i]
                 break;
             i++;
         }                      //i now holds index of appropriate size class
 
-        void* LL_ptr = CLASSES[i];
+        size_t* LL_ptr = CLASSES[i];
+        size_t* LL_ptr_last;
 
-        while(wasFound ==0){//search size class for free block, looking for ideal size, this assumes the list is sorted small to large
-           if LL_ptr == NULL //Linked list did not contain appropriate size
+        while(wasFound ==0){//search size class for free block, looking for ideal size, this assumes the list is sorted small to large/*{{{*/
+            if LL_ptr == NULL //Linked list did not contain appropriate size
                 break;
+            else if (*((int*)(LL_ptr) - 1) >= newsize){//proper size block found
+                wasFound = 1;
+                *((char*)(LL_ptr) - 5) = 1;    //mark as used at front
+                *((char*)(LL_ptr) + size) = 1  //mark as used at back;
+                oldsize = *((int*)(LL_ptr) - 1);
+                *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
+                *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
+
+                //*****TODO******* split remaining size and put in free
+
+                returnPointer =  ((char*)(LL_ptr) + 3);
+                break;
+            }
+            else
+                LL_ptr_last = LL_ptr;
+                LL_ptr = *LL_ptr;
+        }/*}}}*/
+
+        if(wasFound == 0){//need to ask for new memory on the heap
+            returnPointer = mem_sbrk(newsize);
+
+            if (returnPointer == (void *)-1) //check for mem_sbrk error
+                return NULL;
+
+            *(char*)returnPointer = 1; //mark as used at front
+            returnPointer = ((char*)(returnPointer) + 1);
+            *(int*)returnPointer = size; // mark size
+            returnPointer = ((char*)(returnPointer) + 7);// now points to start of usable data
+            *((char*)(returnPointer) + size) = 1; //mark as used at back
         }
 
+        return (void *)(returnPointer);
 
-
+        /* original naive code/*{{{*/
 	void *p = mem_sbrk(newsize);
 	if (p == (void *)-1)
 		return NULL;
@@ -129,18 +161,24 @@ void *mm_malloc(size_t size)
 		*(size_t *)p = size;
 		return (void *)((char *)p + SIZE_T_SIZE);
 	}
+        *//*}}}*/
 }
 
 /*
  * mm_free - Frees a block by changing metadata to freed and adding to appropriate linked list.
  *
  *	Sets up metadata for each free group as follows
- *	1 byte = free (0) or allocated (1), 4 bytes = size of chunk as int (including metadata),
- *	4/8 bytes = pointer to next chunk's pointer, ~~~~EMPTY~~~~~, 4 bytes = size, 1 byte = free or alloc
+ *	1 byte = free (0) or allocated (1),
+ *	4 bytes = size of chunk as int (including metadata),
+ *	4/8(size_t) bytes = pointer to next chunk's pointer,
+ *	~~~~EMPTY~~~~~,
+ *	4 bytes = size,
+ *	1 byte = free or alloc
  *
  */
 void mm_free(void *ptr)
 {
+    //******TODO - deal with 3 byte buffer*****
 	int chunk_size, class_size;
 	int i = 0;
 	void* LL_ptr;
