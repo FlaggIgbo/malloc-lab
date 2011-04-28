@@ -1,4 +1,4 @@
-/*/*{{{*/
+/*
  * mm-naive.c - The fastest, least memory-efficient malloc package.
  *
  * In this naive approach, a block is allocated by simply incrementing
@@ -33,7 +33,7 @@ team_t team = {
 	"Hursh Agrawal",
 	/* Second member's email address (leave blank if none) */
 	"ha470@nyu.edu"
-};/*}}}*/
+};
 
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
@@ -47,7 +47,7 @@ team_t team = {
 
 #define NUM_CLASSES 10
 
-#define OVERHEAD (ALIGN(sizeof(int) + 5))//TODO does the 5 need to be 5*8...? Is the ALIGN necessary?
+#define OVERHEAD (sizeof(int) + 5)//TODO does the 5 need to be 5*8...? Is the ALIGN necessary?
 
 //array holding the size of data in each class (total malloc'd, this includes metadata/overhead)
 //class sizes are 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096
@@ -89,83 +89,83 @@ int mm_init(void)
  *
  *	-Searches for appropriate sized block in free list
  *	-If found,
- *	    Xmarks as used (on both ends!), mark size metadata
- *	    Xremoves block from free list
- *	    Xrepairs links of free list
- *	    >takes remaining space and puts it in proper size free list (if possible)
- *	    Xreturn pointer to beginning of usable data
+ *	    X marks as used (on both ends!), mark size metadata
+ *	    X removes block from free list
+ *	    X repairs links of free list
+ *	    > takes remaining space and puts it in proper size free list (if possible)
+ *	    X return pointer to beginning of usable data
  *	-If unfound
- *	    Xmem_sbrk appropriate size
- *	    Xmark as used, mark size metadata
- *	    Xreturn pointer to beginning
+ *	    X mem_sbrk appropriate size
+ *	    X mark as used, mark size metadata
+ *	    X return pointer to beginning
  */
 void *mm_malloc(size_t size)
 {
 
-        int wasFound; //will be 1 if block is found, 0 if not found
+	int wasFound = 0; //will be 1 if block is found, 0 if not found
 	int newsize = ALIGN(size + OVERHEAD);
-        int oldsize;
-        int i = 0;
-        void *returnPointer;
+	int oldsize;
+	int i = 0;
+	void *returnPointer;
 
-        while(i < NUM_CLASSES){//find appropriate size class
-            if size <= CLASS_SIZE[i]
-                break;
-            i++;
-        }                      //i now holds index of appropriate size class
+	while(i < NUM_CLASSES){//find appropriate size class
+	    if (size <= CLASS_SIZE[i])
+	        break;
+	    i++;
+	}                      //i now holds index of appropriate size class
 
-        size_t* LL_ptr = CLASSES[i];
-        size_t* LL_ptr_last;
+	size_t* LL_ptr = CLASSES[i];
+	size_t* LL_ptr_last;
 
-        while(wasFound ==0){//search size class for free block, looking for ideal size, this assumes the list is sorted small to large/*{{{*/
-            if LL_ptr == NULL //Linked list did not contain appropriate size
-                break;
-            else if (*((int*)(LL_ptr) - 1) >= newsize){//proper size block found
-                wasFound = 1;
-                *((char*)(LL_ptr) - 5) = 1;    //mark as used at front
-                *((char*)(LL_ptr) + size) = 1  //mark as used at back;
-                oldsize = *((int*)(LL_ptr) - 1);
-                *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
-                *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
+    while(wasFound == 0) {//search size class for free block, looking for ideal size, this assumes the list is sorted small to large
+		if (LL_ptr == NULL) //Linked list did not contain appropriate size
+		    break;
+		else if (*((int*)(LL_ptr) - 1) >= newsize) {//proper size block found
+		    wasFound = 1;
+		    *((char*)(LL_ptr) - 5) = 1;    //mark as used at front
+			*((char*)(LL_ptr) + size) = 1;  //mark as used at back
+		    oldsize = *((int*)(LL_ptr) - 1);
+		    *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
+		    *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
 
-                //*****TODO******* split remaining size and put in free
-                //steps:
-                //  >determine if size > smallest possible size (8 + OVERHEAD)
-                //  >determine which class
-                //  >pass start of address, size to "insert to free list" method
+		    //*****TODO******* split remaining size and put in free
+		    //steps:
+		    //  >determine if size > smallest possible size (8 + OVERHEAD)
+		    //  >determine which class
+		    //  >pass start of address, size to "insert to free list" method
 
-                returnPointer =  ((char*)(LL_ptr) + 3);
-                break;
-            }
-            else
-                LL_ptr_last = LL_ptr;
-                LL_ptr = *LL_ptr;
-        }/*}}}*/
+		    returnPointer =  ((char*)(LL_ptr) + 3);
+		    break;
+		} else {
+		    LL_ptr_last = LL_ptr;
+		    LL_ptr = *LL_ptr;
+		}
+	}
 
-        if(wasFound == 0){//need to ask for new memory on the heap
-            returnPointer = mem_sbrk(newsize);
+	if(wasFound == 0) {//need to ask for new memory on the heap
+		returnPointer = mem_sbrk(newsize);
 
-            if (returnPointer == (void *)-1) //check for mem_sbrk error
-                return NULL;
+		if (returnPointer == (void *)-1) //check for mem_sbrk error
+		    return NULL;
 
-            *(char*)returnPointer = 1; //mark as used at front
-            returnPointer = ((char*)(returnPointer) + 1);
-            *(int*)returnPointer = size; // mark size
-            returnPointer = ((char*)(returnPointer) + 7);// now points to start of usable data
-            *((char*)(returnPointer) + size) = 1; //mark as used at back
-        }
+		*(char*)returnPointer = 1; //mark as used at front
+		returnPointer = ((char*)(returnPointer) + 1);
+		*(int*)returnPointer = size; // mark size
+		returnPointer = ((char*)(returnPointer) + 7);// now points to start of usable data
+		*((char*)(returnPointer) + size) = 1; //mark as used at back
+	}
 
-        return (void *)(returnPointer);
+	return (void *)(returnPointer);
 
-        /* original naive code/*{{{*/
+    /* original naive code
 	void *p = mem_sbrk(newsize);
 	if (p == (void *)-1)
 		return NULL;
 	else {
 		*(size_t *)p = size;
 		return (void *)((char *)p + SIZE_T_SIZE);
-	}
-        *//*}}}*/
+	} */
+	
 }
 
 /*
