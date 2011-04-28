@@ -129,6 +129,10 @@ void *mm_malloc(size_t size)
                 *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
 
                 //*****TODO******* split remaining size and put in free
+                //steps:
+                //  >determine if size > smallest possible size (8 + OVERHEAD)
+                //  >determine which class
+                //  >pass start of address, size to "insert to free list" method
 
                 returnPointer =  ((char*)(LL_ptr) + 3);
                 break;
