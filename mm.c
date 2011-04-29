@@ -10,7 +10,7 @@
  * comment that gives a high level description of your solution.
  */
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdlib.h>	
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
@@ -123,13 +123,8 @@ void *mm_malloc(size_t size)
 		    break;
 		else if (*((int*)(LL_ptr) - 1) >= newsize) {//proper size block found
 		    wasFound = 1;
-<<<<<<< Updated upstream
-		    *((char*)(LL_ptr) - 5) = 1;    //mark as used at front
-		    *((char*)(LL_ptr) + size) = 1;  //mark as used at back
-=======
 		    *((char*)(LL_ptr) - 5) = 1; //mark as used at front
 			*((char*)(LL_ptr) + size + 7) = 1;  //mark as used at back
->>>>>>> Stashed changes
 		    oldsize = *((int*)(LL_ptr) - 1);
 		    *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
 		    *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
