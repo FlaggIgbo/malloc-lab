@@ -129,7 +129,7 @@ void *mm_malloc(size_t size)
 		    *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
 		    *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
 
-		    mm_insert((oldsize - newsize), ((char*)LL_ptr + size + 6)); //free(space, pointer to where pointer will be)
+		    mm_insert((oldsize - newsize), ((char*)LL_ptr + size + 8)); //free(space, pointer to where pointer will be)
 
 		    returnPointer =  ((char*)(LL_ptr) + 3);
 		    break;
@@ -195,10 +195,10 @@ void mm_free(void *ptr)
 		ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
 		size = size + csize + 16;
 	}
-	
+
 	if(*(ptr + size + 8) == 0)											//the block AFTER is a free block
 	{
-		csize = *((int*)((char*)ptr + size + 9));						//size of the next block									
+		csize = *((int*)((char*)ptr + size + 9));						//size of the next block
 		size = size + csize + 16;
 	}
 
