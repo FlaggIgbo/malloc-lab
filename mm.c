@@ -123,7 +123,7 @@ void *mm_malloc(size_t size)
 		else if (*((int*)(LL_ptr) - 1) >= newsize) {//proper size block found
 		    wasFound = 1;
 		    *((char*)(LL_ptr) - 5) = 1;    //mark as used at front
-			*((char*)(LL_ptr) + size) = 1;  //mark as used at back
+		    *((char*)(LL_ptr) + size) = 1;  //mark as used at back
 		    oldsize = *((int*)(LL_ptr) - 1);
 		    *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
 		    *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
@@ -165,7 +165,7 @@ void *mm_malloc(size_t size)
 		*(size_t *)p = size;
 		return (void *)((char *)p + SIZE_T_SIZE);
 	} */
-	
+
 }
 
 /*
@@ -255,5 +255,97 @@ int	mm_check(void)
 {
 
 }
+
+/*
+ * mm_insert - given a pointer to the beginning of a free section of data, and a total size,
+ *      inserts the data into appropriate list and marks all relevant metadata
+ *      >determines if size is large enough to be given it's own block (8 + OVERHEAD)
+ *      if so:
+ *          xdetermines which class to insert k
+ *          >updates metadata (which will include insertion to the appropriate spot on the list
+ *              xmarks first byte as free
+ *              xnext four hold size (of usable data)
+ *              xnext SIZE_T hold pointer
+ *              >marks last byte as free
+ *              >previous four holds size (of usable data)
+ *      if not:
+ *          xreturn -1
+ */
+
+int mm_insert(void* location, int size){
+
+    int i;
+    int flag = 1;
+    void *last_ptr = NULL;
+    void *next_ptr;
+    //is size appropriate?
+    int minimumsize = 8 + OVERHEAD;
+    int usableSize = size - OVERHEAD;
+
+    if (size < minimumsize)
+        return -1;
+    else{//size is appropriate
+
+	while(i < NUM_CLASSES){//find appropriate size class
+	    if (size <= CLASS_SIZE[i])
+	        break;
+	    i++;
+	}                      //i now holds index of appropriate size class
+
+        next_ptr = CLASSES[i];
+        //find where to insert in list
+        //as soon as we find a block with blockSize >= size, insert our block right before that one
+        while(flag == 1){
+            if next_ptr = NULL{
+                flag = !flag;
+                if  last_ptr == NULL    //list is empty, insert at beginning
+                    CLASSES[i] = location;
+                else{                   //insert at end of list
+                    next_ptr = ((char*)location +5);
+                    ((char*)location +5) = NULL;
+                }
+            }
+            else{                                    // list is non-empty, start checking for size
+                if *((int*)next_ptr - 1) >= size {      //we have found the appropriate spot
+                    flag = !flag;
+                    if last_ptr == NULL{                    //inserting at beginning of list
+                        CLASSES[i] =  (char*)location + 5;      //location + 5 bytes is where the pointer to next metadata is stored
+                        *((char*)location + 5) = next_ptr;
+                    }
+                    else {                                  //inserting in middle of list
+                        *last_ptr = (char*)location + 5;
+                        *((char*)location + 5) = next_ptr;
+                    }
+                }
+                else{                                   //size is not appropriate, need to try next link
+                    *last_ptr = next_ptr;
+                    next_ptr = *next_ptr;
+                }
+            }
+        }
+
+        *(char*)location = 0; //mark free at front
+        location = ((char*)(location) + 1);
+        *(int*)location = usableSize; //mark size at front
+        location = ((char*)location + (size -2));
+        *(char*)location = 0; //mark free at back
+        *((int*)location -1) = usableSize; //mark size at back
+
+        return 0;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
