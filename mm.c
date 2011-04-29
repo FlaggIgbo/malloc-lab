@@ -10,7 +10,7 @@
  * comment that gives a high level description of your solution.
  */
 #include <stdio.h>
-#include <stdlib.h>	
+#include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
@@ -129,13 +129,7 @@ void *mm_malloc(size_t size)
 		    *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
 		    *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
 
-			FREE((oldsize - newsize), ((char*)LL_ptr + size + 6)); //free(space, pointer to where pointer will be)
-			
-		    //*****TODO******* split remaining size and put in free
-		    //steps:
-		    //  >determine if size > smallest possible size (8 + OVERHEAD)
-		    //  >determine which class
-		    //  >pass start of address, size to "insert to free list" method
+		    mm_insert((oldsize - newsize), ((char*)LL_ptr + size + 6)); //free(space, pointer to where pointer will be)
 
 		    returnPointer =  ((char*)(LL_ptr) + 3);
 		    break;
@@ -203,11 +197,11 @@ void mm_free(void *ptr)
 		ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
 		size = size + csize + 16;
 	}
-	
+
 	if(*(ptr + size + 7) == 0)											//the block AFTER is a free block
 	{
 		csize = *((int*)ptr - 1);										//size of the next block
-		ptr = (char*)ptr - 3 - csize;									
+		ptr = (char*)ptr - 3 - csize;
 		size = size + csize + 16;
 	}
 
@@ -277,15 +271,15 @@ int	mm_check(void)
 /*
  * mm_insert - given a pointer to the beginning of a free section of data, and a total size,
  *      inserts the data into appropriate list and marks all relevant metadata
- *      >determines if size is large enough to be given it's own block (8 + OVERHEAD)
+ *      xdetermines if size is large enough to be given it's own block (8 + OVERHEAD)
  *      if so:
  *          xdetermines which class to insert k
- *          >updates metadata (which will include insertion to the appropriate spot on the list
+ *          xupdates metadata (which will include insertion to the appropriate spot on the list
  *              xmarks first byte as free
  *              xnext four hold size (of usable data)
  *              xnext SIZE_T hold pointer
- *              >marks last byte as free
- *              >previous four holds size (of usable data)
+ *              xmarks last byte as free
+ *              xprevious four holds size (of usable data)
  *      if not:
  *          xreturn -1
  */
@@ -352,18 +346,4 @@ int mm_insert(void* location, int size){
         return 0;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
