@@ -47,7 +47,7 @@ team_t team = {
 
 #define NUM_CLASSES 10
 
-#define OVERHEAD (sizeof(int) + 5)//TODO does the 5 need to be 5*8...? Is the ALIGN necessary?
+#define OVERHEAD 16//TODO does the 5 need to be 5*8...? Is the ALIGN necessary?
 
 //array holding the size of data in each class (total malloc'd, this includes metadata/overhead)
 //class sizes are 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096
@@ -84,8 +84,9 @@ int mm_init(void)
  *	Sets up metadata for each free group as follows
  *	1 byte = free (0) or allocated (1),
  *	4 bytes = size of chunk as int (including metadata),
+ *  3 byte buffer (allowing data to start at a multiple of 8),
  *	~~~~DATA~~~~~,
- *	1 byte = free or alloc
+ *	8 bytes = 00 00 00 00 00 00 00 00/01 = free or alloc
  *
  *	-Searches for appropriate sized block in free list
  *	-If found,
@@ -103,8 +104,8 @@ void *mm_malloc(size_t size)
 {
 
 	int wasFound = 0; //will be 1 if block is found, 0 if not found
-	int newsize = ALIGN(size + OVERHEAD);
-	int oldsize;
+	int newsize = ALIGN(size) + OVERHEAD; //size to be malloc'ed out
+	int oldsize; //size of free/sbrk'd block being used
 	int i = 0;
 	void *returnPointer;
 
@@ -122,12 +123,19 @@ void *mm_malloc(size_t size)
 		    break;
 		else if (*((int*)(LL_ptr) - 1) >= newsize) {//proper size block found
 		    wasFound = 1;
+<<<<<<< Updated upstream
 		    *((char*)(LL_ptr) - 5) = 1;    //mark as used at front
 		    *((char*)(LL_ptr) + size) = 1;  //mark as used at back
+=======
+		    *((char*)(LL_ptr) - 5) = 1; //mark as used at front
+			*((char*)(LL_ptr) + size + 7) = 1;  //mark as used at back
+>>>>>>> Stashed changes
 		    oldsize = *((int*)(LL_ptr) - 1);
 		    *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
 		    *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
 
+			FREE((oldsize - newsize), ((char*)LL_ptr + size + 6)); //free(space, pointer to where pointer will be)
+			
 		    //*****TODO******* split remaining size and put in free
 		    //steps:
 		    //  >determine if size > smallest possible size (8 + OVERHEAD)
@@ -155,7 +163,7 @@ void *mm_malloc(size_t size)
 		*((char*)(returnPointer) + size) = 1; //mark as used at back
 	}
 
-	return (void *)(returnPointer);
+	return (void*)(returnPointer);
 
     /* original naive code
 	void *p = mem_sbrk(newsize);
@@ -183,15 +191,30 @@ void *mm_malloc(size_t size)
 void mm_free(void *ptr)
 {
     //******TODO - deal with 3 byte buffer*****
-	int chunk_size, class_size;
+	int size, csize, class_size;
 	int i = 0;
 	void* LL_ptr;
 
-	ptr = (char*)ptr - 4;
-	chunk_size = *(int*)ptr;
-	ptr = (char*)ptr - 1;
+	ptr = (char*)ptr - 3;												//Puts ptr at start of pointer position (no 3byte buffer in free blocks)
+	size = *((int*)ptr - 1);
 
-	//*****TODO - coallescing*****
+
+	/*
+	 *	Begin coallescing
+	 */
+	if(*(ptr - 6) == 0)	{												//the block BEFORE is a free block
+		ptr = ptr - 6;
+		csize = *((int*)ptr - 1);										//size of the previous block
+		ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
+		size = size + csize + 16;
+	}
+	
+	if(*(ptr + size + 7) == 0)											//the block AFTER is a free block
+	{
+		csize = *((int*)ptr - 1);										//size of the next block
+		ptr = (char*)ptr - 3 - csize;									
+		size = size + csize + 16;
+	}
 
 	*ptr = 0;															//sets free/allocated byte to free(in header)
 
@@ -200,7 +223,7 @@ void mm_free(void *ptr)
 
 	ptr = (int*)((char*)ptr + chunk_size - 6);
 	*ptr = chunk_size; 													//puts size data in (in footer)
-	ptr = (char*)(ptr + 1);
+	ptr = (char*)(ptr + 1);//
 	*ptr = 0; 															//sets free/allocated byte (in footer)
 
 	ptr = ptr - chunk_size + 6;											//back to pointer to next chunk (NULL in this case)
