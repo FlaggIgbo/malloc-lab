@@ -185,7 +185,6 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *ptr)
 {
-    //******TODO - deal with 3 byte buffer*****
 	int size, csize, class_size;
 	int i = 0;
 	void* LL_ptr;
@@ -193,9 +192,8 @@ void mm_free(void *ptr)
 	ptr = (char*)ptr - 3;												//Puts ptr at start of pointer position (no 3byte buffer in free blocks)
 	size = *((int*)ptr - 1);
 
-
 	/*
-	 *	Begin coallescing
+	 *	Begin Coalescing
 	 */
 	if(*(ptr - 6) == 0)	{												//the block BEFORE is a free block
 		ptr = ptr - 6;
@@ -204,46 +202,13 @@ void mm_free(void *ptr)
 		size = size + csize + 16;
 	}
 	
-	if(*(ptr + size + 7) == 0)											//the block AFTER is a free block
+	if(*(ptr + size + 8) == 0)											//the block AFTER is a free block
 	{
-		csize = *((int*)ptr - 1);										//size of the next block
-		ptr = (char*)ptr - 3 - csize;									
+		csize = *((int*)((char*)ptr + size + 9));						//size of the next block									
 		size = size + csize + 16;
 	}
 
-	*ptr = 0;															//sets free/allocated byte to free(in header)
-
-	ptr = (int*)(ptr + 1);
-	*ptr = chunk_size; 													//puts size data in (in header) - redo post coallescing
-
-	ptr = (int*)((char*)ptr + chunk_size - 6);
-	*ptr = chunk_size; 													//puts size data in (in footer)
-	ptr = (char*)(ptr + 1);//
-	*ptr = 0; 															//sets free/allocated byte (in footer)
-
-	ptr = ptr - chunk_size + 6;											//back to pointer to next chunk (NULL in this case)
-
-	class_size = CLASS_SIZE[i];
-	while( (chunk_size > class_size) && (i < NUM_CLASSES) ) {
-		class_size = CLASS_SIZE[++i];						    	    //Checks which size class the data goes into
-	}
-
-	if(class_size == NULL){										 	    //entry is bigger than any class size
-
-		//*****TODO - add to miscellaneous-size linked list in a sorted fashion******
-
-	} else {															//entry fits into a predefined class
-		LL_ptr = CLASSES[class_size];
-	}
-
-/*	while(*LL_ptr != NULL){										   		//Adds to end of linked list
-		LL_ptr = *LL_ptr
-
-		//******TODO - add to linked list in a SORTED fashion - to make a sorted LL, NOT at end*******
-	}
-	*LL_ptr = ptr;
-*/
-
+	mm_insert((void*)(ptr - 5), size);
 }
 
 /*
@@ -290,7 +255,7 @@ int	mm_check(void)
  *          xreturn -1
  */
 
-int mm_insert(void* location, int size){
+int mm_insert(void* location, int size) {
 
     int i;
     int flag = 1;
@@ -308,7 +273,7 @@ int mm_insert(void* location, int size){
 	    if (size <= CLASS_SIZE[i])
 	        break;
 	    i++;
-	}                      //i now holds index of appropriate size class
+	}   //i now holds index of appropriate size class
 
         next_ptr = CLASSES[i];
         //find where to insert in list
