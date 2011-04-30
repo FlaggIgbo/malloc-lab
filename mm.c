@@ -72,7 +72,7 @@ int mm_init(void)
 		size_value = size_value*2;
 	}
 
-	CLASS_SIZE[NUM_CLASSES] = NULL; 					//entry for MISC - bigger than biggest class
+	CLASS_SIZE[NUM_CLASSES] = (void*)NULL; 					//entry for MISC - bigger than biggest class
 
 	return 0;
 }
@@ -108,6 +108,8 @@ void *mm_malloc(size_t size)
 	int oldsize; //size of free/sbrk'd block being used
 	int i = 0;
 	void *returnPointer;
+	size_t* LL_ptr;
+	size_t* LL_ptr_last;
 
 	while(i < NUM_CLASSES){//find appropriate size class
 	    if (size <= CLASS_SIZE[i])
@@ -115,8 +117,7 @@ void *mm_malloc(size_t size)
 	    i++;
 	}                      //i now holds index of appropriate size class
 
-	size_t* LL_ptr = CLASSES[i];
-	size_t* LL_ptr_last;
+	LL_ptr = CLASSES[i];
 
     while(wasFound == 0) {//search size class for free block, looking for ideal size, this assumes the list is sorted small to large
 		if (LL_ptr == NULL) //Linked list did not contain appropriate size
@@ -129,13 +130,13 @@ void *mm_malloc(size_t size)
 		    *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
 		    *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
 
-		    mm_insert((oldsize - newsize), ((char*)LL_ptr + size + 8)); //free(space, pointer to where pointer will be)
+		    mm_insert((void*)((char*)LL_ptr + size + 8), (oldsize - newsize)); 
 
-		    returnPointer =  ((char*)(LL_ptr) + 3);
+		    returnPointer = ((char*)(LL_ptr) + 3);
 		    break;
 		} else {
 		    LL_ptr_last = LL_ptr;
-		    LL_ptr = *LL_ptr;
+		    LL_ptr = (size_t*)*LL_ptr;
 		}
 	}
 
@@ -177,12 +178,11 @@ void *mm_malloc(size_t size)
  *	1 byte = free or alloc
  *
  */
-void mm_free(void *ptr)
+void mm_free(void *argptr)
 {
-	int size, csize, class_size;
-	int i = 0;
-	void* LL_ptr;
-
+	int size, csize;
+	char* ptr = argptr;
+	
 	ptr = (char*)ptr - 3;												//Puts ptr at start of pointer position (no 3byte buffer in free blocks)
 	size = *((int*)ptr - 1);
 
@@ -190,19 +190,23 @@ void mm_free(void *ptr)
 	 *	Begin Coalescing
 	 */
 	if(*(ptr - 6) == 0)	{												//the block BEFORE is a free block
-		ptr = ptr - 6;
+		ptr = (char*)ptr - 6;
 		csize = *((int*)ptr - 1);										//size of the previous block
-		ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
-		size = size + csize + 16;
+		if (csize > 0) {
+			ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
+			size = size + csize + 16;
+		}
 	}
 
 	if(*(ptr + size + 8) == 0)											//the block AFTER is a free block
 	{
 		csize = *((int*)((char*)ptr + size + 9));						//size of the next block
-		size = size + csize + 16;
+		if (csize > 0) {									
+			size = size + csize + 16;
+		}
 	}
 
-	mm_insert((void*)(ptr - 5), size);
+	mm_insert((void*)((char*)argptr - 8), size);
 }
 
 /*
@@ -331,10 +335,10 @@ int	mm_check(void)
 
 int mm_insert(void* location, int size) {
 
-    int i;
+    int i = 0;
     int flag = 1;
-    void *last_ptr = NULL;
-    void *next_ptr;
+    size_t* last_ptr = NULL;
+    size_t* next_ptr;
     //is size appropriate?
     int minimumsize = 8 + OVERHEAD;
     int usableSize = size - OVERHEAD;
@@ -352,31 +356,29 @@ int mm_insert(void* location, int size) {
         next_ptr = CLASSES[i];
         //find where to insert in list
         //as soon as we find a block with blockSize >= size, insert our block right before that one
-        while(flag == 1){
-            if next_ptr = NULL{
+        while (flag == 1) {
+            if (next_ptr == NULL) {
                 flag = !flag;
-                if  last_ptr == NULL    //list is empty, insert at beginning
+                if (last_ptr == NULL)    //list is empty, insert at beginning
                     CLASSES[i] = location;
-                else{                   //insert at end of list
-                    next_ptr = ((char*)location +5);
-                    ((char*)location +5) = NULL;
+                else {                   //insert at end of list
+                    next_ptr = ((char*)location + 5);
+                    *((char*)location + 5) = NULL;
                 }
-            }
-            else{                                    // list is non-empty, start checking for size
-                if *((int*)next_ptr - 1) >= size {      //we have found the appropriate spot
+            } else {                                    // list is non-empty, start checking for size
+                if (*((int*)next_ptr - 1) >= size) {      //we have found the appropriate spot
                     flag = !flag;
-                    if last_ptr == NULL{                    //inserting at beginning of list
+                    if (last_ptr == NULL) {                    //inserting at beginning of list
                         CLASSES[i] =  (char*)location + 5;      //location + 5 bytes is where the pointer to next metadata is stored
-                        *((char*)location + 5) = next_ptr;
+                        *((char*)location + 5) = (size_t*)next_ptr;
                     }
                     else {                                  //inserting in middle of list
-                        *last_ptr = (char*)location + 5;
-                        *((char*)location + 5) = next_ptr;
+                        *(size_t*)last_ptr = (char*)location + 5;
+                        *((char*)location + 5) = (size_t*)next_ptr;
                     }
-                }
-                else{                                   //size is not appropriate, need to try next link
-                    *last_ptr = next_ptr;
-                    next_ptr = *next_ptr;
+                } else {                                   //size is not appropriate, need to try next link
+					last_ptr = next_ptr;
+                    next_ptr = *(size_t*)next_ptr;
                 }
             }
         }
