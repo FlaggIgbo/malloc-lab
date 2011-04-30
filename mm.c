@@ -73,7 +73,9 @@ int mm_init(void)
 	}
 
 	CLASS_SIZE[NUM_CLASSES] = (void*)NULL; 					//entry for MISC - bigger than biggest class
-
+    printf("top:%d\n",mem_heap_hi() );
+    printf("bottom:%d\n",mem_heap_lo() );
+    printf("init%d\n",mm_check());
 	return 0;
 }
 
@@ -103,6 +105,7 @@ int mm_init(void)
 void *mm_malloc(size_t size)
 {
 
+    printf("mallocs%d\n",mm_check());
 	int wasFound = 0; //will be 1 if block is found, 0 if not found
 	int newsize = ALIGN(size) + OVERHEAD; //size to be malloc'ed out
 	int oldsize; //size of free/sbrk'd block being used
@@ -153,8 +156,8 @@ void *mm_malloc(size_t size)
 		*((char*)(returnPointer) + size) = 1; //mark as used at back
 	}
 
-    //printf("%d\n",mm_check());
 
+        printf("malloce%d\n",mm_check());
 	return (void*)(returnPointer);
 
     /* original naive code
@@ -182,6 +185,7 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *argptr)
 {
+    printf("free%d\n",mm_check());
 	int size, csize;
 	char* ptr = argptr;
 
@@ -191,23 +195,24 @@ void mm_free(void *argptr)
 	/*
 	 *	Begin Coalescing
 	 */
-	// if(*(ptr - 6) == 0)	{												//the block BEFORE is a free block
-	// 	ptr = (char*)ptr - 6;
-	// 	csize = *((int*)ptr - 1);										//size of the previous block
-	// 	if (csize > 0) {
-	// 		ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
-	// 		size = size + csize + 16;
-	// 	}
-	// }
-	// 
-	// if(*(ptr + size + 8) == 0)											//the block AFTER is a free block
-	// {
-	// 	csize = *((int*)((char*)ptr + size + 9));						//size of the next block
-	// 	if (csize > 0) {
-	// 		size = size + csize + 16;
-	// 	}
-	// }
+	 if(*(ptr - 6) == 0)	{	//TODO cast as char necessary?											//the block BEFORE is a free block
+	 	ptr = (char*)ptr - 6;
+	 	csize = *((int*)ptr - 1);										//size of the previous block
+	 	if (csize > 0) {
+	 		ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
+	 		size = size + csize + 16;
+	 	}
+	 }
 
+	 if(*(ptr + size + 8) == 0)											//the block AFTER is a free block
+	 {
+
+	 	csize = *((int*)((char*)ptr + size + 9));						//size of the next block
+	 	if ((csize > 0)&&(csize == ALIGN(csize))) {
+	 		size = size + csize + 16;
+	 	}
+	 }
+    printf("%d",mm_check());
 	mm_insert((void*)((char*)argptr - 8), size);
 }
 
@@ -216,6 +221,7 @@ void mm_free(void *argptr)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
+    printf("%d",mm_check());
 	void *oldptr = ptr;
 	void *newptr;
 	size_t copySize;
@@ -228,6 +234,7 @@ void *mm_realloc(void *ptr, size_t size)
 		copySize = size;
 	memcpy(newptr, oldptr, copySize);
 	mm_free(oldptr);
+    printf("%d\n",mm_check());
 	return newptr;
 }
 
@@ -254,10 +261,9 @@ int	mm_check(void)
     int i;
     int size;
     size_t* top_heap = mem_heap_hi();
-    printf("top of heap: %d\n bottom of heap: %d\n", top_heap, mem_heap_lo());
 
     for(i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity
-        next_ptr = CLASSES[i];
+        next_ptr = (size_t*)CLASSES[i];
         if (next_ptr == NULL)
             break;
         while(flag){
@@ -295,7 +301,7 @@ int	mm_check(void)
                 i++;
             }
             //now need to search for next_ptr in CLASSES[i]
-            search_ptr = CLASSES[i];
+            search_ptr = (size_t*)CLASSES[i];
             while(1){
                 if(next_ptr == search_ptr){//has ben found
                     break;
@@ -304,13 +310,13 @@ int	mm_check(void)
                    printf("ERROR: free block in heap not found in coresponding free list.\n");
                    return 4;
                 }
-                search_ptr = *search_ptr;
+                search_ptr = *(size_t*)search_ptr;
             }
-            next_ptr = ((char*)next_ptr + size);
+            next_ptr = (size_t*)((char*)next_ptr + size + OVERHEAD);
         }
         else if (*(char*)next_ptr == 1){//is an allocated block
             size = *(char*)((char*)next_ptr + 1);
-            next_ptr = ((char*)next_ptr + size);
+            next_ptr = (size_t*)((char*)next_ptr + size + OVERHEAD);
         }
         else{ //data is corrupted
             printf("free/allocated marker is other than 1/0. DATA CORRUPTED\n");
@@ -340,8 +346,10 @@ int	mm_check(void)
  */
 
 int mm_insert(void* loc, int size) {
-	
+
 	void* location = loc;
+
+    printf("insert%d\n",mm_check());
     int i = 0;
     int flag = 1;
     size_t* last_ptr = NULL;
@@ -360,27 +368,27 @@ int mm_insert(void* loc, int size) {
 	    i++;
 	}   //i now holds index of appropriate size class
 
-        next_ptr = CLASSES[i];
+        next_ptr = (size_t*)CLASSES[i];
         //find where to insert in list
         //as soon as we find a block with blockSize >= size, insert our block right before that one
-        while (flag == 1) {
+        while (flag == 1) {//TODO Hursh- can you take a look a the pointer assignments esp. in lines 377-382...i have a suspicion that they are incorrect but my eyes are the ones that coded....
             if (next_ptr == NULL) {
                 flag = !flag;
                 if (last_ptr == NULL) {   //list is empty, insert at beginning
-                    CLASSES[i] = (char*)location + 5;
-					 *(size_t*)((char*)location + 5) = NULL;
+                    CLASSES[i] = (size_t*)((char*)location + 5);
+		    *(size_t*)((char*)location + 5) = NULL;
                 } else {                   //insert at end of list
-                    *last_ptr = ((char*)location + 5);
+                    *last_ptr = (size_t*)((char*)location + 5);
                     *(size_t*)((char*)location + 5) = NULL;
                 }
             } else {                                    // list is non-empty, start checking for size
                 if (*((int*)next_ptr - 1) >= size) {      //we have found the appropriate spot
                     flag = !flag;
                     if (last_ptr == NULL) {                    //inserting at beginning of list
-                        CLASSES[i] =  (char*)location + 5;      //location + 5 bytes is where the pointer to next metadata is stored
+                        CLASSES[i] =  (size_t*)((char*)location + 5);      //location + 5 bytes is where the pointer to next metadata is stored
                         *(size_t*)((char*)location + 5) = (size_t*)next_ptr;
                     } else {                                  //inserting in middle of list
-                        *(size_t*)last_ptr = (char*)location + 5;
+                        *(size_t*)last_ptr = (size_t*)((char*)location + 5);
                         *(size_t*)((char*)location + 5) = (size_t*)next_ptr;
                     }
                 } else {                                   //size is not appropriate, need to try next link
@@ -397,6 +405,7 @@ int mm_insert(void* loc, int size) {
         *(char*)location = 0; //mark free at back
         *((int*)location -1) = usableSize; //mark size at back
 
+    printf("inserte%d\n",mm_check());
         return 0;
     }
 }
