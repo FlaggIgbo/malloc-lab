@@ -100,9 +100,9 @@ int mm_init(void)
  *	    X mark as used, mark size metadata
  *	    X return pointer to beginning
  */
-void *mm_malloc(size_t size)/*{{{*/
+void *mm_malloc(size_t size)
 {
-        printf("mallocing");
+//        printf("mallocing");
 
 	int wasFound = 0; //will be 1 if block is found, 0 if not found
 	int newsize = ALIGN(size) + OVERHEAD; //size to be malloc'ed out
@@ -153,7 +153,7 @@ void *mm_malloc(size_t size)/*{{{*/
 		returnPointer = ((char*)(returnPointer) + 7);// now points to start of usable data
 		*((char*)(returnPointer) + size) = 1; //mark as used at back
 	}
-        printf(mm_check());
+        //printf(mm_check());
 	return (void*)(returnPointer);
 
     /* original naive code
@@ -165,7 +165,7 @@ void *mm_malloc(size_t size)/*{{{*/
 		return (void *)((char *)p + SIZE_T_SIZE);
 	} */
 
-}/*}}}*/
+}
 
 /*
  * mm_free - Frees a block by changing metadata to freed and adding to appropriate linked list.
@@ -179,7 +179,7 @@ void *mm_malloc(size_t size)/*{{{*/
  *	1 byte = free or alloc
  *
  */
-void mm_free(void *argptr)/*{{{*/
+void mm_free(void *argptr)
 {
 	int size, csize;
 	char* ptr = argptr;
@@ -190,30 +190,30 @@ void mm_free(void *argptr)/*{{{*/
 	/*
 	 *	Begin Coalescing
 	 */
-	if(*(ptr - 6) == 0)	{												//the block BEFORE is a free block
-		ptr = (char*)ptr - 6;
-		csize = *((int*)ptr - 1);										//size of the previous block
-		if (csize > 0) {
-			ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
-			size = size + csize + 16;
-		}
-	}
-
-	if(*(ptr + size + 8) == 0)											//the block AFTER is a free block
-	{
-		csize = *((int*)((char*)ptr + size + 9));						//size of the next block
-		if (csize > 0) {
-			size = size + csize + 16;
-		}
-	}
+	// if(*(ptr - 6) == 0)	{												//the block BEFORE is a free block
+	// 	ptr = (char*)ptr - 6;
+	// 	csize = *((int*)ptr - 1);										//size of the previous block
+	// 	if (csize > 0) {
+	// 		ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
+	// 		size = size + csize + 16;
+	// 	}
+	// }
+	// 
+	// if(*(ptr + size + 8) == 0)											//the block AFTER is a free block
+	// {
+	// 	csize = *((int*)((char*)ptr + size + 9));						//size of the next block
+	// 	if (csize > 0) {
+	// 		size = size + csize + 16;
+	// 	}
+	// }
 
 	mm_insert((void*)((char*)argptr - 8), size);
-}/*}}}*/
+}
 
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
-void *mm_realloc(void *ptr, size_t size)/*{{{*/
+void *mm_realloc(void *ptr, size_t size)
 {
 	void *oldptr = ptr;
 	void *newptr;
@@ -228,7 +228,7 @@ void *mm_realloc(void *ptr, size_t size)/*{{{*/
 	memcpy(newptr, oldptr, copySize);
 	mm_free(oldptr);
 	return newptr;
-}/*}}}*/
+}
 
 /*
  * mm_check - checks consistency of heap
@@ -245,7 +245,7 @@ void *mm_realloc(void *ptr, size_t size)/*{{{*/
  *          if a block is allocated:
  *           ???
  */
-int	mm_check(void)/*{{{*/
+int	mm_check(void)
 {
     size_t* next_ptr;
     size_t* search_ptr;
@@ -256,7 +256,7 @@ int	mm_check(void)/*{{{*/
 
     printf("checking heap...");
 
-    for(i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity/*{{{*/
+    for(i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity
         next_ptr = CLASSES[i];
         if (next_ptr == NULL)
             break;
@@ -276,7 +276,7 @@ int	mm_check(void)/*{{{*/
             if (next_ptr == NULL)
                 flag = !flag;
         }
-    }/*}}}*/
+    }
 
     next_ptr = mem_heap_lo();//start of heap
 
@@ -320,7 +320,7 @@ int	mm_check(void)/*{{{*/
             break;
     }
     return 0;
-}/*}}}*/
+}
 
 
 /*
@@ -339,8 +339,9 @@ int	mm_check(void)/*{{{*/
  *          xreturn -1
  */
 
-int mm_insert(void* location, int size) {/*{{{*/
-
+int mm_insert(void* loc, int size) {
+	
+	void* location = loc;
     int i = 0;
     int flag = 1;
     size_t* last_ptr = NULL;
@@ -380,10 +381,10 @@ int mm_insert(void* location, int size) {/*{{{*/
                         *(size_t*)((char*)location + 5) = (size_t*)next_ptr;
                     } else {                                  //inserting in middle of list
                         *(size_t*)last_ptr = (char*)location + 5;
-                        *((char*)location + 5) = (size_t*)next_ptr;
+                        *(size_t*)((char*)location + 5) = (size_t*)next_ptr;
                     }
                 } else {                                   //size is not appropriate, need to try next link
-	            last_ptr = next_ptr;
+	            	last_ptr = next_ptr;
                     next_ptr = *(size_t*)next_ptr;
                 }
             }
@@ -392,11 +393,11 @@ int mm_insert(void* location, int size) {/*{{{*/
         *(char*)location = 0; //mark free at front
         location = ((char*)(location) + 1);
         *(int*)location = usableSize; //mark size at front
-        location = ((char*)location + (size -2));
+        location = ((char*)location + (size - 2));
         *(char*)location = 0; //mark free at back
         *((int*)location -1) = usableSize; //mark size at back
 
         return 0;
     }
-}/*}}}*/
+}
 
