@@ -100,8 +100,9 @@ int mm_init(void)
  *	    X mark as used, mark size metadata
  *	    X return pointer to beginning
  */
-void *mm_malloc(size_t size)
+void *mm_malloc(size_t size)/*{{{*/
 {
+        printf("mallocing");
 
 	int wasFound = 0; //will be 1 if block is found, 0 if not found
 	int newsize = ALIGN(size) + OVERHEAD; //size to be malloc'ed out
@@ -152,7 +153,7 @@ void *mm_malloc(size_t size)
 		returnPointer = ((char*)(returnPointer) + 7);// now points to start of usable data
 		*((char*)(returnPointer) + size) = 1; //mark as used at back
 	}
-
+        printf(mm_check());
 	return (void*)(returnPointer);
 
     /* original naive code
@@ -164,7 +165,7 @@ void *mm_malloc(size_t size)
 		return (void *)((char *)p + SIZE_T_SIZE);
 	} */
 
-}
+}/*}}}*/
 
 /*
  * mm_free - Frees a block by changing metadata to freed and adding to appropriate linked list.
@@ -178,7 +179,7 @@ void *mm_malloc(size_t size)
  *	1 byte = free or alloc
  *
  */
-void mm_free(void *argptr)
+void mm_free(void *argptr)/*{{{*/
 {
 	int size, csize;
 	char* ptr = argptr;
@@ -207,12 +208,12 @@ void mm_free(void *argptr)
 	}
 
 	mm_insert((void*)((char*)argptr - 8), size);
-}
+}/*}}}*/
 
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
-void *mm_realloc(void *ptr, size_t size)
+void *mm_realloc(void *ptr, size_t size)/*{{{*/
 {
 	void *oldptr = ptr;
 	void *newptr;
@@ -227,7 +228,7 @@ void *mm_realloc(void *ptr, size_t size)
 	memcpy(newptr, oldptr, copySize);
 	mm_free(oldptr);
 	return newptr;
-}
+}/*}}}*/
 
 /*
  * mm_check - checks consistency of heap
@@ -244,7 +245,7 @@ void *mm_realloc(void *ptr, size_t size)
  *          if a block is allocated:
  *           ???
  */
-int	mm_check(void)
+int	mm_check(void)/*{{{*/
 {
     size_t* next_ptr;
     size_t* search_ptr;
@@ -252,6 +253,8 @@ int	mm_check(void)
     int i;
     int size;
     size_t* top_heap = mem_heap_hi();
+
+    printf("checking heap...");
 
     for(i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity/*{{{*/
         next_ptr = CLASSES[i];
@@ -313,9 +316,11 @@ int	mm_check(void)
             printf("free/allocated marker is other than 1/0. DATA CORRUPTED");
             return 5;
         }
+        if(*next_ptr == NULL)
+            break;
     }
     return 0;
-}
+}/*}}}*/
 
 
 /*
@@ -334,7 +339,7 @@ int	mm_check(void)
  *          xreturn -1
  */
 
-int mm_insert(void* location, int size) {
+int mm_insert(void* location, int size) {/*{{{*/
 
     int i = 0;
     int flag = 1;
@@ -393,5 +398,5 @@ int mm_insert(void* location, int size) {
 
         return 0;
     }
-}
+}/*}}}*/
 
