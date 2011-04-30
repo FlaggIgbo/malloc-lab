@@ -102,7 +102,6 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-//        printf("mallocing");
 
 	int wasFound = 0; //will be 1 if block is found, 0 if not found
 	int newsize = ALIGN(size) + OVERHEAD; //size to be malloc'ed out
@@ -153,7 +152,9 @@ void *mm_malloc(size_t size)
 		returnPointer = ((char*)(returnPointer) + 7);// now points to start of usable data
 		*((char*)(returnPointer) + size) = 1; //mark as used at back
 	}
-        //printf(mm_check());
+
+    //printf("%d\n",mm_check());
+
 	return (void*)(returnPointer);
 
     /* original naive code
@@ -253,8 +254,7 @@ int	mm_check(void)
     int i;
     int size;
     size_t* top_heap = mem_heap_hi();
-
-    printf("checking heap...");
+    printf("top of heap: %d\n bottom of heap: %d\n", top_heap, mem_heap_lo());
 
     for(i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity
         next_ptr = CLASSES[i];
@@ -262,13 +262,13 @@ int	mm_check(void)
             break;
         while(flag){
             if(*((char*)next_ptr - 5) != 0){//check if block is listed as free
-                printf("ERROR: block in free list not marked as free (possibly some other n00b mistake making it look like this)");
+                printf("ERROR: block in free list not marked as free (possibly some other n00b mistake making it look like this)\n");
                 flag = !flag;
                 return 1;
             }
             size = *((int*)next_ptr-1);
             if ( (*((char*)next_ptr -6) == 0) || (*((char*)next_ptr + size + 11) == 0) ){//checks if coalesce should have happened but didn't
-                printf("ERROR: block immediately before or after free block was free but not coalesced. COALESCEFAIL (possibly some other n00b mistake making it look like this)");
+                printf("ERROR: block immediately before or after free block was free but not coalesced. COALESCEFAIL (possibly some other n00b mistake making it look like this)\n");
                 flag = !flag;
                 return 2;
             }
@@ -281,8 +281,8 @@ int	mm_check(void)
     next_ptr = mem_heap_lo();//start of heap
 
     while(1){//traverse entire heap for integrity
-        if (&next_ptr > *top_heap){
-            printf("ERROR: Top of heap exceeded by pointer");
+        if (next_ptr > top_heap){
+            printf("ERROR: Top of heap exceeded by pointer\n  top: %d,\n pointer: %d\n", top_heap, next_ptr);
             return 3;
         }
 
@@ -301,7 +301,7 @@ int	mm_check(void)
                     break;
                 }
                 else if (search_ptr == NULL){//indicates block not found in list
-                   printf("ERROR: free block in heap not found in coresponding free list.");
+                   printf("ERROR: free block in heap not found in coresponding free list.\n");
                    return 4;
                 }
                 search_ptr = *search_ptr;
@@ -313,7 +313,7 @@ int	mm_check(void)
             next_ptr = ((char*)next_ptr + size);
         }
         else{ //data is corrupted
-            printf("free/allocated marker is other than 1/0. DATA CORRUPTED");
+            printf("free/allocated marker is other than 1/0. DATA CORRUPTED\n");
             return 5;
         }
         if(*next_ptr == NULL)
