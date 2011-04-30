@@ -130,7 +130,7 @@ void *mm_malloc(size_t size)
 		    *((int*)(LL_ptr) - 1) = size; //mark size metadata with size
 		    *LL_ptr_last = *LL_ptr; //repaired linked list, even if null.
 
-		    mm_insert((void*)((char*)LL_ptr + size + 8), (oldsize - newsize)); 
+		    mm_insert((void*)((char*)LL_ptr + size + 8), (oldsize - newsize));
 
 		    returnPointer = ((char*)(LL_ptr) + 3);
 		    break;
@@ -182,7 +182,7 @@ void mm_free(void *argptr)
 {
 	int size, csize;
 	char* ptr = argptr;
-	
+
 	ptr = (char*)ptr - 3;												//Puts ptr at start of pointer position (no 3byte buffer in free blocks)
 	size = *((int*)ptr - 1);
 
@@ -201,7 +201,7 @@ void mm_free(void *argptr)
 	if(*(ptr + size + 8) == 0)											//the block AFTER is a free block
 	{
 		csize = *((int*)((char*)ptr + size + 9));						//size of the next block
-		if (csize > 0) {									
+		if (csize > 0) {
 			size = size + csize + 16;
 		}
 	}
@@ -246,14 +246,14 @@ void *mm_realloc(void *ptr, size_t size)
  */
 int	mm_check(void)
 {
-    void* next_ptr;
-    void* search_ptr*;
+    size_t* next_ptr;
+    size_t* search_ptr;
     int flag = 1;
     int i;
     int size;
-    void* top_heap = mem_heap_hi();
+    size_t* top_heap = mem_heap_hi();
 
-    for(int i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity/*{{{*/
+    for(i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity/*{{{*/
         next_ptr = CLASSES[i];
         if (next_ptr == NULL)
             break;
@@ -360,7 +360,7 @@ int mm_insert(void* location, int size) {
             if (next_ptr == NULL) {
                 flag = !flag;
                 if (last_ptr == NULL)    //list is empty, insert at beginning
-                    CLASSES[i] = location;
+                    CLASSES[i] = ((char*)location + 5);
                 else {                   //insert at end of list
                     next_ptr = ((char*)location + 5);
                     *((char*)location + 5) = NULL;
@@ -377,7 +377,7 @@ int mm_insert(void* location, int size) {
                         *((char*)location + 5) = (size_t*)next_ptr;
                     }
                 } else {                                   //size is not appropriate, need to try next link
-					last_ptr = next_ptr;
+	            last_ptr = next_ptr;
                     next_ptr = *(size_t*)next_ptr;
                 }
             }
