@@ -244,78 +244,78 @@ void *mm_realloc(void *ptr, size_t size)
  *          if a block is allocated:
  *           ???
  */
-int	mm_check(void)
-{
-    void* next_ptr;
-    void* search_ptr*;
-    int flag = 1;
-    int i;
-    int size;
-    void* top_heap = mem_heap_hi();
-
-    for(int i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity/*{{{*/
-        next_ptr = CLASSES[i];
-        if (next_ptr == NULL)
-            break;
-        while(flag){
-            if(*((char*)next_ptr - 5) != 0){//check if block is listed as free
-                printf("ERROR: block in free list not marked as free (possibly some other n00b mistake making it look like this)");
-                flag = !flag;
-                return 1;
-            }
-            size = *((int*)next_ptr-1);
-            if ( (*((char*)next_ptr -6) == 0) || (*((char*)next_ptr + size + 11) == 0) ){//checks if coalesce should have happened but didn't
-                printf("ERROR: block immediately before or after free block was free but not coalesced. COALESCEFAIL (possibly some other n00b mistake making it look like this)");
-                flag = !flag;
-                return 2;
-            }
-            next_ptr = *(size_t*)next_ptr;
-            if (next_ptr == NULL)
-                flag = !flag;
-        }
-    }/*}}}*/
-
-    next_ptr = mem_heap_lo();//start of heap
-
-    while(1){//traverse entire heap for integrity
-        if (&next_ptr > *top_heap){
-            printf("ERROR: Top of heap exceeded by pointer");
-            return 3;
-        }
-
-        if (*(char*)next_ptr == 0){//is a free block
-            size = *(int*)((char*)next_ptr + 1);
-
-            while(i < NUM_CLASSES){//find appropriate size class
-                if (size <= CLASS_SIZE[i])
-                    break;
-                i++;
-            }
-            //now need to search for next_ptr in CLASSES[i]
-            search_ptr = CLASSES[i];
-            while(1){
-                if(next_ptr == search_ptr){//has ben found
-                    break;
-                }
-                else if (search_ptr == NULL){//indicates block not found in list
-                   printf("ERROR: free block in heap not found in coresponding free list.");
-                   return 4;
-                }
-                search_ptr = *search_ptr;
-            }
-            next_ptr = ((char*)next_ptr + size);
-        }
-        else if (*(char*)next_ptr == 1){//is an allocated block
-            size = *(char*)((char*)next_ptr + 1);
-            next_ptr = ((char*)next_ptr + size);
-        }
-        else{ //data is corrupted
-            printf("free/allocated marker is other than 1/0. DATA CORRUPTED");
-            return 5;
-        }
-    }
-    return 0;
-}
+// int	mm_check(void)
+// {
+//     void* next_ptr;
+//     void* search_ptr*;
+//     int flag = 1;
+//     int i;
+//     int size;
+//     void* top_heap = mem_heap_hi();
+// 
+//     for(int i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity/*{{{*/
+//         next_ptr = CLASSES[i];
+//         if (next_ptr == NULL)
+//             break;
+//         while(flag){
+//             if(*((char*)next_ptr - 5) != 0){//check if block is listed as free
+//                 printf("ERROR: block in free list not marked as free (possibly some other n00b mistake making it look like this)");
+//                 flag = !flag;
+//                 return 1;
+//             }
+//             size = *((int*)next_ptr-1);
+//             if ( (*((char*)next_ptr -6) == 0) || (*((char*)next_ptr + size + 11) == 0) ){//checks if coalesce should have happened but didn't
+//                 printf("ERROR: block immediately before or after free block was free but not coalesced. COALESCEFAIL (possibly some other n00b mistake making it look like this)");
+//                 flag = !flag;
+//                 return 2;
+//             }
+//             next_ptr = *(size_t*)next_ptr;
+//             if (next_ptr == NULL)
+//                 flag = !flag;
+//         }
+//     }/*}}}*/
+// 
+//     next_ptr = mem_heap_lo();//start of heap
+// 
+//     while(1){//traverse entire heap for integrity
+//         if (&next_ptr > *top_heap){
+//             printf("ERROR: Top of heap exceeded by pointer");
+//             return 3;
+//         }
+// 
+//         if (*(char*)next_ptr == 0){//is a free block
+//             size = *(int*)((char*)next_ptr + 1);
+// 
+//             while(i < NUM_CLASSES){//find appropriate size class
+//                 if (size <= CLASS_SIZE[i])
+//                     break;
+//                 i++;
+//             }
+//             //now need to search for next_ptr in CLASSES[i]
+//             search_ptr = CLASSES[i];
+//             while(1){
+//                 if(next_ptr == search_ptr){//has ben found
+//                     break;
+//                 }
+//                 else if (search_ptr == NULL){//indicates block not found in list
+//                    printf("ERROR: free block in heap not found in coresponding free list.");
+//                    return 4;
+//                 }
+//                 search_ptr = *search_ptr;
+//             }
+//             next_ptr = ((char*)next_ptr + size);
+//         }
+//         else if (*(char*)next_ptr == 1){//is an allocated block
+//             size = *(char*)((char*)next_ptr + 1);
+//             next_ptr = ((char*)next_ptr + size);
+//         }
+//         else{ //data is corrupted
+//             printf("free/allocated marker is other than 1/0. DATA CORRUPTED");
+//             return 5;
+//         }
+//     }
+//     return 0;
+// }
 
 /*
  * mm_insert - given a pointer to the beginning of a free section of data, and a total size,
@@ -359,20 +359,20 @@ int mm_insert(void* location, int size) {
         while (flag == 1) {
             if (next_ptr == NULL) {
                 flag = !flag;
-                if (last_ptr == NULL)    //list is empty, insert at beginning
-                    CLASSES[i] = location;
-                else {                   //insert at end of list
-                    next_ptr = ((char*)location + 5);
-                    *((char*)location + 5) = NULL;
+                if (last_ptr == NULL) {   //list is empty, insert at beginning
+                    CLASSES[i] = (char*)location + 5;
+					 *(size_t*)((char*)location + 5) = NULL;
+                } else {                   //insert at end of list
+                    *last_ptr = ((char*)location + 5);
+                    *(size_t*)((char*)location + 5) = NULL;
                 }
             } else {                                    // list is non-empty, start checking for size
                 if (*((int*)next_ptr - 1) >= size) {      //we have found the appropriate spot
                     flag = !flag;
                     if (last_ptr == NULL) {                    //inserting at beginning of list
                         CLASSES[i] =  (char*)location + 5;      //location + 5 bytes is where the pointer to next metadata is stored
-                        *((char*)location + 5) = (size_t*)next_ptr;
-                    }
-                    else {                                  //inserting in middle of list
+                        *(size_t*)((char*)location + 5) = (size_t*)next_ptr;
+                    } else {                                  //inserting in middle of list
                         *(size_t*)last_ptr = (char*)location + 5;
                         *((char*)location + 5) = (size_t*)next_ptr;
                     }
