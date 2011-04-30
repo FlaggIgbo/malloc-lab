@@ -73,7 +73,9 @@ int mm_init(void)
 	}
 
 	CLASS_SIZE[NUM_CLASSES] = (void*)NULL; 					//entry for MISC - bigger than biggest class
-
+    printf("top:%d\n",mem_heap_hi() );
+    printf("bottom:%d\n",mem_heap_lo() );
+    printf("init%d\n",mm_check());
 	return 0;
 }
 
@@ -103,6 +105,7 @@ int mm_init(void)
 void *mm_malloc(size_t size)/*{{{*/
 {
 
+    printf("mallocs%d\n",mm_check());
 	int wasFound = 0; //will be 1 if block is found, 0 if not found
 	int newsize = ALIGN(size) + OVERHEAD; //size to be malloc'ed out
 	int oldsize; //size of free/sbrk'd block being used
@@ -152,7 +155,7 @@ void *mm_malloc(size_t size)/*{{{*/
 		returnPointer = ((char*)(returnPointer) + 7);// now points to start of usable data
 		*((char*)(returnPointer) + size) = 1; //mark as used at back
 	}
-        printf("%d\n",mm_check());
+        printf("malloce%d\n",mm_check());
 	return (void*)(returnPointer);
 
     /* original naive code
@@ -180,6 +183,7 @@ void *mm_malloc(size_t size)/*{{{*/
  */
 void mm_free(void *argptr)/*{{{*/
 {
+    printf("free%d\n",mm_check());
 	int size, csize;
 	char* ptr = argptr;
 
@@ -188,7 +192,7 @@ void mm_free(void *argptr)/*{{{*/
 
 	/*
 	 *	Begin Coalescing
-	 */
+	 *
 	if(*(ptr - 6) == 0)	{												//the block BEFORE is a free block
 		ptr = (char*)ptr - 6;
 		csize = *((int*)ptr - 1);										//size of the previous block
@@ -205,7 +209,9 @@ void mm_free(void *argptr)/*{{{*/
 			size = size + csize + 16;
 		}
 	}
+        */
 
+    printf("%d",mm_check());
 	mm_insert((void*)((char*)argptr - 8), size);
 }/*}}}*/
 
@@ -214,6 +220,7 @@ void mm_free(void *argptr)/*{{{*/
  */
 void *mm_realloc(void *ptr, size_t size)/*{{{*/
 {
+    printf("%d",mm_check());
 	void *oldptr = ptr;
 	void *newptr;
 	size_t copySize;
@@ -226,6 +233,7 @@ void *mm_realloc(void *ptr, size_t size)/*{{{*/
 		copySize = size;
 	memcpy(newptr, oldptr, copySize);
 	mm_free(oldptr);
+    printf("%d\n",mm_check());
 	return newptr;
 }/*}}}*/
 
@@ -252,7 +260,6 @@ int	mm_check(void)/*{{{*/
     int i;
     int size;
     size_t* top_heap = mem_heap_hi();
-    printf("top of heap: %d\n bottom of heap: %d\n", top_heap, mem_heap_lo());
 
     for(i = 0; i < NUM_CLASSES; i++){//traverse free lists for integrity/*{{{*/
         next_ptr = CLASSES[i];
@@ -339,6 +346,7 @@ int	mm_check(void)/*{{{*/
 
 int mm_insert(void* location, int size) {/*{{{*/
 
+    printf("insert%d\n",mm_check());
     int i = 0;
     int flag = 1;
     size_t* last_ptr = NULL;
@@ -394,6 +402,7 @@ int mm_insert(void* location, int size) {/*{{{*/
         *(char*)location = 0; //mark free at back
         *((int*)location -1) = usableSize; //mark size at back
 
+    printf("inserte%d\n",mm_check());
         return 0;
     }
 }/*}}}*/
