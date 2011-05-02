@@ -49,6 +49,7 @@ team_t team = {
 #define FOOTER_SIZE 8
 
 size_t* freeList = (size_t*)0xFFFFFFFF;
+int freeListSize = 0;
 
 /* 
  * mm_init - initialize the malloc package.
@@ -78,7 +79,7 @@ void *mm_malloc(size_t size)
 	// 	if (nextPtr == (size_t*)0xFFFFFFFF) {
 			p = mem_sbrk(newSize);
 	// 		break;
-	// 	} else if (*(int*)((char*)nextPtr - sizeof(int)) >= size) {
+	// 	} else if (*(int*)((char*)nextPtr - 4) >= size) {
 	// 		p = (void*)((char*)nextPtr - 5);
 	// 		*lastPtr = *nextPtr;
 	// 		break;
@@ -106,25 +107,47 @@ void *mm_malloc(size_t size)
 void mm_free(void *pointer)
 {
 	int size;
+	int found = 0;
 	char* ptr = (char*)pointer - HEADER_SIZE; //points to the start of the free block
 	size_t* nextPtr;
 	size_t* lastPtr;
+	
+	/* ---Vars for loop debugging--- */
+	size_t* storedPtr;
+	int stored = 0;
+	int loopSize = 0;
+	int loopEnd = 0;
 	int j = 0; //LL node counter - for debugging
+	 /* ------ */
 	
 	size = *(int*)((char*)ptr + 1); //extracts size from malloc'ed metadata
 	
 	nextPtr = (size_t*)freeList;
 	lastPtr = (size_t*)&freeList;
 	
-	while(1) {
-		if ((nextPtr == (size_t*)0xFFFFFFFF) /*|| (*(int*)((char*)nextPtr - sizeof(int)) >= size)*/) { //if found or at end
+	while(found == 0) {
+		if ((nextPtr == (size_t*)0xFFFFFFFF) || (*(int*)((char*)nextPtr - 4) >= size)) { //if found or at end
 			*lastPtr = (size_t*)((char*)ptr + 5);
 			*(size_t*)((char*)ptr + 5) = (size_t*)nextPtr;
-			break;
+			freeListSize++;
+			found = 1;
 		} else { //if not, keep looking through list
 			lastPtr = nextPtr;
-			nextPtr = (size_t)*nextPtr;
+			nextPtr = (size_t*)*nextPtr;
 			j++;
+			if (j > freeListSize) { //loop occuring - fix loop
+				if (stored == 0) {
+					stored = 1;
+					storedPtr = lastPtr;
+				}
+				if (storedPtr == nextPtr && loopSize > 2) {
+					*nextPtr = (size_t*)0xFFFFFFFF;
+					loopEnd = 1;
+				}
+				if (loopEnd == 0) {
+					loopSize++;
+				}
+			}
 		}		
 	}
 	
