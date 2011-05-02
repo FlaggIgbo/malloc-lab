@@ -1,6 +1,6 @@
 /*
  * mm-naive.c - The fastest, least memory-efficient malloc package.
- * 
+ *
  * In this naive approach, a block is allocated by simply incrementing
  * the brk pointer.  A block is pure payload. There are no headers or
  * footers.  Blocks are never coalesced or reused. Realloc is
@@ -51,7 +51,7 @@ team_t team = {
 size_t* freeList = (size_t*)0xFFFFFFFF;
 int freeListSize = 0;
 
-/* 
+/*
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
@@ -59,22 +59,23 @@ int mm_init(void)
 	return 0;
 }
 
-/* 
+/*
  * mm_malloc - Allocate a block by incrementing the brk pointer.
  *     Always allocate a block whose size is a multiple of the alignment.
  */
 void *mm_malloc(size_t size)
 {
+        printf("malloc...\n");
 	int newSize = ALIGN(size) + OVERHEAD;
 	void *p;
 	size_t* nextPtr;
 	size_t* lastPtr;
 	int j = 0; //LL node counter - for debugging
-	
+
 	nextPtr = (size_t*)freeList;
 	lastPtr = (size_t*)&freeList;
-	
-	// 
+
+	//
 	// while(1) {
 	// 	if (nextPtr == (size_t*)0xFFFFFFFF) {
 			p = mem_sbrk(newSize);
@@ -87,7 +88,7 @@ void *mm_malloc(size_t size)
 	// 		lastPtr = nextPtr;
 	// 		nextPtr = (size_t)*nextPtr;
 	// 		j++;
-	// 	}		
+	// 	}
 	// }
 
 	if (p == (void *)-1)
@@ -102,10 +103,11 @@ void *mm_malloc(size_t size)
 }
 
 /*
- * mm_free 
+ * mm_free
  */
 void mm_free(void *pointer)
 {
+        printf("free...\n");
 	int size;
 	int found = 0;
 	char* ptr = (char*)pointer - HEADER_SIZE; //points to the start of the free block
@@ -121,7 +123,7 @@ void mm_free(void *pointer)
 	 /* ------ */
 	
 	size = *(int*)((char*)ptr + 1); //extracts size from malloc'ed metadata
-	
+
 	nextPtr = (size_t*)freeList;
 	lastPtr = (size_t*)&freeList;
 	
@@ -132,6 +134,7 @@ void mm_free(void *pointer)
 			freeListSize++;
 			found = 1;
 		} else { //if not, keep looking through list
+                        //printf("search fail...%d\n",j );
 			lastPtr = nextPtr;
 			nextPtr = (size_t*)*nextPtr;
 			j++;
@@ -149,8 +152,9 @@ void mm_free(void *pointer)
 				}
 			}
 		}		
+
 	}
-	
+
 	// *(char*)p = 1; //set header UNALLOCATED bit
 	// *(size_t *)((char*)p + 1) = size; //set header size
 	// *(size_t *)((char*)p + size + OVERHEAD - 5) = size; //set footer size
