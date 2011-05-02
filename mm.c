@@ -1,6 +1,6 @@
 /*
  * mm-naive.c - The fastest, least memory-efficient malloc package.
- * 
+ *
  * In this naive approach, a block is allocated by simply incrementing
  * the brk pointer.  A block is pure payload. There are no headers or
  * footers.  Blocks are never coalesced or reused. Realloc is
@@ -74,7 +74,7 @@ team_t team = {
 
 static char* firstBlock = 0; //points to first block in allocated/free list
 
-/* 
+/*
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
@@ -83,45 +83,45 @@ int mm_init(void)
 	void* firstHeapExtention;
 	char* ptr;
 	size_t size;
-	
+
 	firstBlock = mem_sbrk(2*DSIZE); //sbreaks out for prologue/epilogue nodes
 	if (firstBlock == (void*)-1 ) {
 		return -1;
 	}
-	
+
 	PUT(firstBlock, 0); //add padding byte
 	PUT(firstBlock + WSIZE, PACK(DSIZE, 1)); //header for prologue entry/node (16 bytes)
 	PUT(firstBlock + (2*WSIZE), PACK(DSIZE, 1)); //footer for prologue entry/node (16 bytes)
 	PUT(firstBlock + (3*WSIZE), PACK(0, 1)); //header for epilogue node (only 8 bytes)
-	firstBlock = firstBlock + (2*WSIZE); //moves the pointer up to the middle of 
-	
+	firstBlock = firstBlock + (2*WSIZE); //moves the pointer up to the middle of
+
 	/* Extend heap for first CHUNKSIZE bytes to be malloc'd */
-	
+
 	if ((CHUNKSIZE/WSIZE)%2) { //ensures we sbrk an even number of words (WSIZEs) to make sure heap is aligned by 8
 		size = ((CHUNKSIZE/WSIZE) + 1) * WSIZE;
 	} else {
 		size = CHUNKSIZE;
 	}
-	
+
 	ptr = mem_sbrk(size);
 	if ((long)ptr == -1) { //if mem_sbrk didn't work
 		return -1;
 	}
-	
+
 	//mark header/footer/epilogue header for new, gigantic free heap
 	PUT(HEADER(ptr), PACK(size, 0)); //free-block header
 	PUT(FDRP(ptr), PACK(size, 0)); //free-block footer
 	PUT(HEADER(NEXT_BLKP(ptr)), PACK(0, 1)); //New epilogue header
-	
+
 	//coalesce with previous epilogue header
 	size += GET_SIZE(HEADER(PREV_BLKP(ptr)));
 	PUT(HEADER(PREV_BLKP(ptr)), PACK(size, 0)); //new header pos, new size
 	PUT(FOOTER(ptr), PACK(size, 0)); //same footer pos, new size
-	
+
 	return 0;
 }
 
-/* 
+/*
  * mm_malloc - Allocate a block by incrementing the brk pointer.
  *     Always allocate a block whose size is a multiple of the alignment.
  */
@@ -130,15 +130,15 @@ void *mm_malloc(size_t size)
 	size_t newSize; //size including overhead
 	size_t heapSize; //size of heap (if heap needs extending)
 	size_t slotSize; //size of empty slot found
-	
+
 	char* ptr = NULL;
 	void* findPtr;
-	
+
 	if (size == 0)
 		return NULL;
-	
+
 	newSize = ALIGN(size + DSIZE); //takes into account overhead and alignment
-	
+
 	/* Search the list for a free block */
 	findPtr = firstBlock;
 	while (GET_SIZE(HEADER(findPtr)) > 0) {
@@ -148,20 +148,20 @@ void *mm_malloc(size_t size)
 		}
 		findPtr = NEXT_BLKP(findPtr);
     }
-	
+
 	/* Convert free block into used */
 	if (ptr != NULL) {
 		slotSize = GET_SIZE(HEADER(ptr));
 
 		//ensures the remainder of free slot is big enough to be its own free slot
-	    if ((slotSize - newSize) >= (2 * DSIZE)) { 
+	    if ((slotSize - newSize) >= (2 * DSIZE)) {
 			PUT(HEADER(ptr), PACK(newSize, 1));
 			PUT(FOOTER(ptr), PACK(newSize, 1));
 			ptr = NEXT_BLKP(ptr);
 			PUT(HEADER(ptr), PACK(newSize - slotSize, 0));
 			PUT(FOOTER(ptr), PACK(newSize - slotSize, 0));
 			ptr = PREV_BLKP(ptr);
-	    } else { 
+	    } else {
 			PUT(HEADER(ptr), PACK(newSize, 1));
 			PUT(FOOTER(ptr), PACK(newSize, 1));
 	    }
@@ -193,22 +193,22 @@ void *mm_malloc(size_t size)
 		slotSize = GET_SIZE(HEADER(ptr));
 
 		//ensures the remainder of free slot is big enough to be its own free slot
-	    if ((slotSize - newSize) >= (2 * DSIZE)) { 
+	    if ((slotSize - newSize) >= (2 * DSIZE)) {
 			PUT(HEADER(ptr), PACK(newSize, 1));
 			PUT(FOOTER(ptr), PACK(newSize, 1));
 			ptr = NEXT_BLKP(ptr);
 			PUT(HEADER(ptr), PACK(newSize - slotSize, 0));
 			PUT(FOOTER(ptr), PACK(newSize - slotSize, 0));
 			ptr = PREV_BLKP(ptr);
-	    } else { 
+	    } else {
 			PUT(HEADER(ptr), PACK(newSize, 1));
 			PUT(FOOTER(ptr), PACK(newSize, 1));
 	    }
-	
+
 		return ptr;
 	}
-	
-	
+
+
 }
 
 /*
@@ -219,10 +219,10 @@ void mm_free(void *ptr)
 	size_t* size = GET_SIZE(HEADER(ptr));
 	size_t previousBlock = GET_ALLOC(FOOTER(PREV_BLKP(ptr))); //1 if prev. block is allocated, 0 if free
 	size_t nextBlock = GET_ALLOC(HEADER(PREV_BLKP(ptr))); //1 if next block is allocated, 0 if free
-	
+
 	PUT(HEADER(ptr), PACK(size, 0));
 	PUT(FOOTER(ptr), PACK(size, 0));
-	
+
 	/* Start coalescing */
 	if (previousBlock && nextBlock) { /* if both prev/next are allocated */
 		//Do nothing
@@ -264,7 +264,44 @@ void *mm_realloc(void *ptr, size_t size)
 }
 
 
+/*
+ * mm_check
+ *an extended version of the mm_check suggested in the pdf as well as the example provided on
+ *
+ *the cs-app website
+ */
+int check_block(void *bp){
+    if ((size_t)bp%8){
+        printf("ERROR, %p is not aligned correctly\n", bp);
+        return 1;
+    }
+    if (GET(HDRP(bp)) != GET(FTRP(bp))){
+        printf("ERROR, %p has inconsistent header/footer\n", bp);
+        return 2;
+    }
+    return 0;
+}
 
+int mm_check(void){
+
+    char *bp;
+    int cont = 1;
+
+    size_t* start_heap =  mem_heap_lo();
+    size_t* end_heap =  mem_heap_hi();
+
+    size_t* curr_block = start_heap;
+
+    for(bp = start_heap; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+        printf(check_block(bp));
+        if (bp > end_heap || bp < start_heap)
+            printf("Error: pointer %p out of heap bounds\n", bp);
+        if (GET_ALLOC(bp) == 0 && GET_ALLOC(NEXT_BLKP(bp))==0)
+            printf("ERROR: contiguous free blocks %p and %p not coalesced\n", bp, NEXT_BLKP(bp));
+    }
+
+    return 0;
+}
 
 
 

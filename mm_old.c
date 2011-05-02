@@ -84,7 +84,7 @@ int mm_init(void)
  *	Sets up metadata for each free group as follows
  *	1 byte = free (0) or allocated (1),
  *	4 bytes = size of chunk as int (including metadata),
- *  3 byte buffer (allowing data to start at a multiple of 8),
+ *      3 byte buffer (allowing data to start at a multiple of 8),
  *	~~~~DATA~~~~~,
  *	8 bytes = 00 00 00 00 00 00 00 00/01 = free or alloc
  *
@@ -185,24 +185,24 @@ void mm_free(void *argptr)
 	int size, csize;
 	char* ptr = argptr;
 
-	ptr = (char*)ptr - 3;												//Puts ptr at start of pointer position (no 3byte buffer in free blocks)
+	ptr = (char*)ptr - 3;					//Puts ptr at start of pointer position (no 3byte buffer in free blocks)
 	size = *((int*)ptr - 1);
 
 	/*
 	 *	Begin Coalescing
 	 */
-	// if(*(ptr - 6) == 0)	{												//the block BEFORE is a free block
+	// if(*(ptr - 6) == 0)	{							//the block BEFORE is a free block
 	// 	ptr = (char*)ptr - 6;
-	// 	csize = *((int*)ptr - 1);										//size of the previous block
+	// 	csize = *((int*)ptr - 1);						//size of the previous block
 	// 	if (csize > 0) {
-	// 		ptr = (char*)ptr - 3 - csize;									//sets pointer to pointer portion of previous block
+	// 		ptr = (char*)ptr - 3 - csize;					//sets pointer to pointer portion of previous block
 	// 		size = size + csize + 16;
 	// 	}
 	// }
-	// 
-	// if(*(ptr + size + 8) == 0)											//the block AFTER is a free block
+	//
+	// if(*(ptr + size + 8) == 0)							//the block AFTER is a free block
 	// {
-	// 	csize = *((int*)((char*)ptr + size + 9));						//size of the next block
+	// 	csize = *((int*)((char*)ptr + size + 9));				//size of the next block
 	// 	if (csize > 0) {
 	// 		size = size + csize + 16;
 	// 	}
@@ -340,7 +340,7 @@ int	mm_check(void)
  */
 
 int mm_insert(void* loc, int size) {
-	
+
 	void* location = loc;
 	int i = 0, j = 0;
     int flag = 1;
