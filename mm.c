@@ -62,9 +62,13 @@ team_t team = {
 #define NEXT(ptr)  ((char *)(ptr) + GET_SIZE(((char *)(ptr) - WSIZE))) //next block
 #define PREVIOUS(ptr)  ((char *)(ptr) - GET_SIZE(((char *)(ptr) - DSIZE))) //prev block
 
+#define INIT_ARRAY_SIZE
+
 /* whether or not array free list is implemented*/
 #define ARRAY_IMPLEMENTATION 0
 
+int freeArraySize = 10;
+size_t* FREE_ARRAY[10];
 
 static char *firstBlock = 0;  //ptr to first block in list 
 int test = 0;
@@ -87,6 +91,7 @@ int mm_init(void)
 		return -1;
 	}
 	
+	FREE_ARRAY[0] = (size_t*)firstBlock;
 	//FROM TEXT - pg 831
     PUT(firstBlock, 0); //for alignment
     PUT(firstBlock + (1*WSIZE), PACK(DSIZE, 1)); //header for prologue entry/node (8 bytes)
@@ -107,7 +112,9 @@ int mm_init(void)
 	if ((long)ptr == -1) { //if mem_sbrk didn't work
 		return -1;
 	}
-
+	
+	FREE_ARRAY[1] = (size_t*)ptr;
+	
 	//mark header/footer/epilogue header for new, gigantic free heap
     PUT(HEADER(ptr), PACK(size, 0)); //free-block header
     PUT(FOOTER(ptr), PACK(size, 0)); //free-block footer
@@ -238,6 +245,24 @@ void mm_free(void *ptr)
 		PUT(FOOTER(NEXT(ptr)), PACK(size, 0)); //new footer pos, new size
 		ptr = PREVIOUS(ptr);
     }
+}
+
+/*
+ * expandArray - expands the array holding the list of frees if it becomes too short
+ *
+ */
+void expandArray(void) {
+	size_t* oldArray = FREE_ARRAY;
+	int newArray[freeArraySize*2];
+	int i = 0;
+	
+	FREE_ARRAY = newArray;
+	
+	for (i=0; i<freeArraySize; i++) {
+		FREE_ARRAY[i] = oldArray[i];
+	}
+	
+	freeArraySize = freeArraySize*2;
 }
 
 /*
