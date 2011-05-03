@@ -93,8 +93,7 @@ int mm_init(void)
 	PUT(firstBlock + (3*WSIZE), PACK(0, 1)); //header for epilogue node (only 8 bytes)
 	firstBlock = firstBlock + (2*WSIZE); //moves the pointer up to between prologue/epilogue
 	
-	/* Extend heap for first CHUNKSIZE bytes to be malloc'd */
-	
+	/* sbreak out a heap for free space */	
 	if ((CHUNKSIZE/WSIZE)%2) { //ensures we sbrk an even number of words (WSIZEs) to make sure heap is aligned by 8
 		size = ((CHUNKSIZE/WSIZE) + 1) * WSIZE;
 	} else {
