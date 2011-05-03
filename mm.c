@@ -41,6 +41,8 @@ team_t team = {
 /* rounds up to the nearest multiple of ALIGNMENT */
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
 
+/* whether or not array free list is implemented*/
+#define ARRAY_IMPLEMENTATION 0
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
@@ -286,6 +288,8 @@ int mm_check(void){
 
     char *bp;
     int cont = 1;
+    int size;
+    int found = 0;
 
     size_t* start_heap =  mem_heap_lo();
     size_t* end_heap =  mem_heap_hi();
@@ -298,6 +302,28 @@ int mm_check(void){
             printf("Error: pointer %p out of heap bounds\n", bp);
         if (GET_ALLOC(bp) == 0 && GET_ALLOC(NEXT_BLKP(bp))==0)
             printf("ERROR: contiguous free blocks %p and %p not coalesced\n", bp, NEXT_BLKP(bp));
+        if(ARRAY_IMPLEMENTATION){//need to check if it is in the free array
+
+            for(int i = 0; i < sizeof(FREE_ARRAY); i++){
+                if(FREE_ARRAY[i] == bp){
+                    found = 1;
+                    break;
+                }
+            }
+            if(!found)
+                printf("ERROR: pointer %p marked as free in heap but not found in free list", bp);
+        }
+    }
+
+    if(ARRAY_IMPLEMENTATION){
+        for(int i = 0; i < sizeof(FREE_ARRAY); i++){
+            if( FREE_ARRAY[i] != NULL ){//will only examine true entries in the array
+                if(GET_ALLOC(FREE_ARRAY[i] != 0))
+                    printf("ERROR: entry %d in free list not marked as free\n", i);
+                if(size = GET_SIZE(FREE_ARRAY[i]) == 0)
+                    printf("ERROR: size is %d", i);
+            }
+        }
     }
 
     return 0;
