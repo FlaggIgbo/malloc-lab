@@ -84,6 +84,11 @@ int mm_init(void)
 {
 	void* ptr;
 	size_t size;
+	int i;
+	
+	for (i=0; i<freeArraySize; i++) {
+		FREE_ARRAY[i] = (size_t)NULL;
+	}
 	
 	firstBlock = mem_sbrk(4*WSIZE); //sbreaks out the first few bytes - to create prologue/epilogue
 	
@@ -260,6 +265,10 @@ void expandArray(void) {
 	
 	for (i=0; i<freeArraySize; i++) {
 		FREE_ARRAY[i] = oldArray[i];
+	}
+	
+	for (i=freeArraySize; i<(freeArraySize*2); i++) {
+		FREE_ARRAY[i] = (size_t)NULL;
 	}
 	
 	freeArraySize = freeArraySize*2;
