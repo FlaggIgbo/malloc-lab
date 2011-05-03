@@ -76,6 +76,7 @@ int test = 0;
 /* Function prototypes for internal helper routines */
 static void *enlarge(size_t size);
 static int mm_check(void); 
+static void expandArray(void);
 
 /* 
  * mm_init - initialize the malloc package.
